@@ -1,7 +1,8 @@
 # SS2-Final-Project-Recipe-Finder-And-Collection-Manager
-Overview
+# Overview
 
-Recipe Finder & Collection Manager is a web application that helps users discover recipes, organize their favorite dishes, and plan meals for the week.
+# Recipe Finder & Collection Manager 
+is a web application that helps users discover recipes, organize their favorite dishes, and plan meals for the week.
 Users can search recipes by name or ingredients, save favorites, create a weekly meal plan, and automatically generate a shopping list. The app also provides a culinary news feed.
 
 Features
