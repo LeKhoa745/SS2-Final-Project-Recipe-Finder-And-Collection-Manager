@@ -20,7 +20,6 @@ The goal of the first week was to discuss and define the project idea, understan
 * Defined the main concept and features of the application.
 * Wrote the initial project description.
 * Created the GitHub repository for version control and collaboration.
-* Organized the basic project structure and documentation folder.
 
 ## Work Distribution
 
