@@ -37,7 +37,6 @@ NewsAPI (culinary news)
 
 Google OAuth2 (authentication)
 
-
 # Deployment:
 
 Frontend: Vercel
@@ -46,9 +45,11 @@ Backend: Render / Railway
 # Team:
 
 Le Duc Minh Khoa: Frontend
+
 Do Hoang Khoi: Database
+
 Nguyen Duc Ban: Backend
 
 # Project Status:
 
-*Week 1: Project description is completed.
+Week 1: Project description is completed.
