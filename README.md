@@ -26,7 +26,9 @@ Admin dashboard for user management
 # Technologies
 
 Frontend: ReactJS, Tailwind CSS
+
 Backend: Node.js, Express.js, JWT
+
 Database: MySQL
 
 # APIs:
@@ -36,11 +38,6 @@ Spoonacular API (recipes)
 NewsAPI (culinary news)
 
 Google OAuth2 (authentication)
-
-# Deployment:
-
-Frontend: Vercel
-Backend: Render / Railway
 
 # Team:
 
