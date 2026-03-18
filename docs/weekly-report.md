@@ -34,7 +34,7 @@ The goal of the first week was to discuss and define the project idea, understan
 
 ## Challenges
 
-As this is the first week of the project, the team is still learning the technologies that will be used. The main challenge was deciding on the project scope and choosing suitable tools.
+As this is the first week of the project, the team is still learning the technologies that will be used. The main challenge was deciding the project scope and selecting appropriate tools and APIs.
 
 ## Plan for Next Week
 
