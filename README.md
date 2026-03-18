@@ -1,52 +1,64 @@
 # SS2-Final-Project-Recipe-Finder-And-Collection-Manager
-# Overview:
 
-Recipe Finder & Collection Manager 
-is a web application that helps users discover recipes, organize their favorite dishes, and plan meals for the week.
-Users can search recipes by name or ingredients, save favorites, create a weekly meal plan, and automatically generate a shopping list. The app also provides a culinary news feed.
+## Overview
 
-# Features:
+Recipe Finder & Collection Manager is a web application designed to help users discover recipes, organize their favorite dishes, and plan meals more efficiently.
 
-Google OAuth2 user authentication
+Many people often have ingredients at home but do not know what to cook. Our application aims to solve this problem by allowing users to search for recipes using dish names or ingredients they already have. Users can also save recipes, plan weekly meals, and generate shopping lists automatically.
 
-Recipe search by name or ingredients
+This project is currently in the early development stage, and the first phase focuses on planning the system and preparing the development environment.
 
-Detailed recipe information and nutrition data
+## Main Features
 
-Personal wishlist for saved recipes
+The application will include the following features:
 
-Weekly meal planner
+* **Recipe Search:** Search recipes by name or ingredients.
+* **Recipe Details:** View ingredients, instructions, and nutrition information.
+* **Wishlist:** Save favorite recipes for future use.
+* **Meal Planner:** Plan meals for each day of the week.
+* **Shopping List:** Automatically generate a list of ingredients from planned meals.
+* **Culinary News:** Display food-related news and trends.
 
-Automatic shopping list generation
+## Technologies
 
-Culinary news feed
+The project will use the following technologies:
 
-Admin dashboard for user management
+**Frontend**
 
-# Technologies
+* ReactJS
+* Tailwind CSS
 
-Frontend: ReactJS, Tailwind CSS
+**Backend**
 
-Backend: Node.js, Express.js, JWT
+* Node.js
+* Express.js
+* JWT authentication
 
-Database: MySQL
+**Database**
 
-# APIs:
+* MySQL
 
-Spoonacular API (recipes)
+**APIs**
 
-NewsAPI (culinary news)
+* Spoonacular API (recipe data)
+* NewsAPI (culinary news)
+* Google OAuth2 (user authentication)
 
-Google OAuth2 (authentication)
+## Current Progress
 
-# Team:
+During the first week, the team has:
 
-Le Duc Minh Khoa: Frontend
+* Defined the project idea and main features
+* Written the project description
+* Created the GitHub repository
 
-Do Hoang Khoi: Database
+Further development will begin in the following weeks.
 
-Nguyen Duc Ban: Backend
+## Team
 
-# Project Status:
+- Le Duc Minh Khoa: Frontend
+- Do Hoang Khoi: Database
+- Nguyen Duc Ban: Backend
 
-Week 1: Project description is completed.
+
+
