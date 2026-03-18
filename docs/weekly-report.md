@@ -34,7 +34,8 @@ The goal of the first week was to discuss and define the project idea, understan
 
 ## Challenges
 
-As this is the first week of the project, the team is still learning the technologies that will be used. The main challenge was deciding on the project scope and learning how to use all the tools and technologies required.
+As this is the first week of the project, the team is still learning the technologies that will be used. The main challenge was deciding on the project scope and choosing suitable tools.
+
 ## Plan for Next Week
 
 * Learn more about the technologies used in the project (React, Node.js, MySQL).
