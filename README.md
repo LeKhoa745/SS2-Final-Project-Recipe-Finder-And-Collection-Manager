@@ -1,16 +1,64 @@
-# React + Vite
+# SS2-Final-Project-Recipe-Finder-And-Collection-Manager
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
 
-Currently, two official plugins are available:
+Recipe Finder & Collection Manager is a web application designed to help users discover recipes, organize their favorite dishes, and plan meals more efficiently.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Many people often have ingredients at home but do not know what to cook. Our application aims to solve this problem by allowing users to search for recipes using dish names or ingredients they already have. Users can also save recipes, plan weekly meals, and generate shopping lists automatically.
 
-## React Compiler
+This project is currently in the early development stage, and the first phase focuses on planning the system and preparing the development environment.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Main Features
 
-## Expanding the ESLint configuration
+The application will include the following features:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* **Recipe Search:** Search recipes by name or ingredients.
+* **Recipe Details:** View ingredients, instructions, and nutrition information.
+* **Wishlist:** Save favorite recipes for future use.
+* **Meal Planner:** Plan meals for each day of the week.
+* **Shopping List:** Automatically generate a list of ingredients from planned meals.
+* **Culinary News:** Display food-related news and trends.
+
+## Technologies
+
+The project will use the following technologies:
+
+**Frontend**
+
+* ReactJS
+* Tailwind CSS
+
+**Backend**
+
+* Node.js
+* Express.js
+* JWT authentication
+
+**Database**
+
+* MySQL
+
+**APIs**
+
+* Spoonacular API (recipe data)
+* NewsAPI (culinary news)
+* Google OAuth2 (user authentication)
+
+## Current Progress
+
+During the first week, the team has:
+
+* Defined the project idea and main features
+* Written the project description
+* Created the GitHub repository
+
+Further development will begin in the following weeks.
+
+## Team
+
+- Le Duc Minh Khoa: Frontend
+- Do Hoang Khoi: Database
+- Nguyen Duc Ban: Backend
+
+
+
