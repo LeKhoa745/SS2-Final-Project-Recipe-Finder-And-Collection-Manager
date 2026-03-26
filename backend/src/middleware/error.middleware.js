@@ -1,8 +1,7 @@
 import { logger } from '../utils/logger.js';
-
+import { validationResult } from 'express-validator';
 // express-validator errors
 export const handleValidationErrors = (req, res, next) => {
-  const { validationResult } = await import('express-validator');
   const result = validationResult(req);
   if (!result.isEmpty()) {
     return res.status(422).json({
