@@ -1,14 +1,29 @@
-const express = require("express");
-const cors = require("cors");
+import 'dotenv/config';
+import app from './src/app.js';
+import { connectDB } from './src/config/db.js';
+import { logger } from './src/utils/logger.js';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT || 5000;
 
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend is working" });
+async function bootstrap() {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      logger.info(`🚀 Server running on http://localhost:${PORT}`);
+      logger.info(`   Environment : ${process.env.NODE_ENV}`);
+      logger.info(`   Client URL  : ${process.env.CLIENT_URL}`);
+    });
+  } catch (err) {
+    logger.error('❌ Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received — shutting down gracefully');
+  process.exit(0);
 });
 
-app.listen(3001, () => {
-  console.log("Server running on port 3001");
-});
+bootstrap();
