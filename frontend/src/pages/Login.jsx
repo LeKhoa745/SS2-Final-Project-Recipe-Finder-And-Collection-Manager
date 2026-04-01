@@ -1,211 +1,164 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [alert, setAlert] = useState({ type: "", message: "" });
+  const emailRef    = useRef();
+  const passwordRef = useRef();
+  const [error,   setError]   = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Switch between Login and Register tabs
-  const switchTab = (tab) => setIsLogin(tab === 0);
-
-  // Reusable alert function (now actually used)
-  const showAlert = (type, message) => {
-    setAlert({ type, message });
-    setTimeout(() => {
-      setAlert({ type: "", message: "" });
-    }, 4500);
-  };
-
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    showAlert("success", "Đăng nhập thành công! Chào mừng trở lại bếp 🍳");
-    setTimeout(() => navigate("/"), 1800);
-  };
+    setError("");
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    showAlert("success", "Đăng ký thành công! Đang chuyển hướng...");
-    setTimeout(() => navigate("/"), 1800);
-  };
+    const email    = emailRef.current.value.trim();
+    const password = passwordRef.current.value;
 
-  const togglePassword = (id) => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.type = input.type === "password" ? "text" : "password";
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email, password }),
+        credentials: "include", // needed for the refreshToken httpOnly cookie
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "❌ Incorrect email or password. Please try again.");
+        return;
+      }
+
+      // Store access token and user info for authenticated requests
+      localStorage.setItem("accessToken", data.data.accessToken);
+      localStorage.setItem("user", JSON.stringify(data.data.user));
+
+      alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name}!`);
+      navigate("/");
+    } catch (err) {
+      setError("⚠️ Cannot reach the server. Make sure the backend is running on port 5000.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      {/* Background */}
-      <div className="fixed inset-0 z-0">
-        <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBndTUJexQE2WLYFJthq5JyIet4n-7ioDma-nYwjcqov3MI2r-9oPRlt0INWG-3j6fIfkkqUIB6NGtXFDJoTH2tdKbMQoajdc0vkK8ncxYerpF6BPwbDt1lw5a9UYOZDpV-_4hOgKKY5lvvQ7uwbOwpzehm9Shuc4DTvXG6bL5C_XFRLxX-7jX5gehFUCuaE1O-1Z8eZBhcyn1M_LmcXlcw9B5cH6S1Vx4Q99H5l8lxtHg20blsjrWOwh-82yZyAuyfKnSbzXdN5QnF"
-          className="w-full h-full object-cover"
-          alt="Food background"
-        />
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+    <div className="bg-background font-body text-on-surface min-h-screen flex flex-col relative overflow-x-hidden">
+      {/* Top Navigation */}
+      <header className="absolute top-0 w-full z-10 flex justify-between items-center px-8 py-6">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">🍳</span>
+          <span className="text-2xl font-bold text-orange-950 font-headline tracking-tight">
+            Recipe Finder
+          </span>
+        </div>
+      </header>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md mx-auto">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="flex items-center gap-3 text-white drop-shadow-lg">
-              <span className="text-4xl">🍳</span>
-              <span className="text-3xl font-bold tracking-tight">Recipe Finder</span>
-            </div>
-          </div>
+      <main className="flex-grow flex items-center justify-center relative p-4 md:p-8 min-h-screen">
+        {/* Background */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img
+            src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/96/6c/2a/come-on-in-for-good-food.jpg"
+            alt="Delicious food"
+            className="w-full h-full object-cover"
+            style={{ filter: "brightness(0.95) contrast(1.05)" }}
+          />
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
 
-          {/* Glass Card */}
-          <div className="glass rounded-3xl p-8 shadow-2xl border border-white/50">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-8">
-              <button
-                onClick={() => switchTab(0)}
-                className={`flex-1 pb-4 text-lg font-medium transition-all ${
-                  isLogin ? "text-[#ad2c00] border-b-4 border-[#ad2c00]" : "text-gray-500"
-                }`}
-              >
-                Đăng nhập
-              </button>
-              <button
-                onClick={() => switchTab(1)}
-                className={`flex-1 pb-4 text-lg font-medium transition-all ${
-                  !isLogin ? "text-[#ad2c00] border-b-4 border-[#ad2c00]" : "text-gray-500"
-                }`}
-              >
-                Đăng ký
-              </button>
-            </div>
+        <div className="container mx-auto z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Login Card */}
+          <div className="lg:col-span-5 lg:col-start-8">
+            <div className="glass-panel rounded-xl p-8 md:p-12 shadow-2xl border border-white/15">
+              <h3 className="font-headline text-2xl font-bold text-on-surface mb-8">
+                Welcome Back
+              </h3>
 
-            {/* Alert Message */}
-            {alert.message && (
-              <div
-                className={`mb-6 p-4 rounded-2xl text-center font-medium ${
-                  alert.type === "success"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {alert.message}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
+                    <span>🥗</span> Email Address
+                  </label>
+                  <div className="relative group">
+                    <input
+                      ref={emailRef}
+                      id="email"
+                      type="email"
+                      required
+                      placeholder="customer123@gmail.com"
+                      className="w-full bg-surface-container-low border-none rounded-md px-4 py-4 focus:ring-0 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none"
+                    />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-focus-within:w-full" />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
+                    <span>🔑</span> Password
+                  </label>
+                  <div className="relative group">
+                    <input
+                      ref={passwordRef}
+                      id="password"
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      className="w-full bg-surface-container-low border-none rounded-md px-4 py-4 focus:ring-0 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none"
+                    />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-focus-within:w-full" />
+                  </div>
+                  <div className="flex justify-end mt-2">
+                    <a href="#" className="text-sm font-bold text-primary hover:underline underline-offset-4 decoration-2">
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
+
+                {/* Error message */}
+                {error && (
+                  <p className="text-red-600 text-sm font-medium bg-red-50 rounded-lg p-3">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="primary-gradient w-full py-4 rounded-xl text-on-primary font-bold text-lg hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                      Logging in...
+                    </>
+                  ) : (
+                    "Login to Kitchen"
+                  )}
+                </button>
+              </form>
+
+              <div className="flex items-center gap-4 py-6">
+                <div className="h-px flex-grow bg-outline-variant/30" />
+                <span className="font-label text-xs text-on-surface-variant/60 uppercase">
+                  New to Recipe Finder?
+                </span>
+                <div className="h-px flex-grow bg-outline-variant/30" />
               </div>
-            )}
 
-            {/* ==================== LOGIN FORM ==================== */}
-            {isLogin && (
-              <form onSubmit={handleLogin} className="space-y-6">
-                <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">
-                    🥗 Địa chỉ Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full bg-white/80 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:border-[#ad2c00]"
-                    placeholder="customer123@gmail.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">
-                    🔑 Mật khẩu
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="loginPassword"
-                      type="password"
-                      required
-                      className="w-full bg-white/80 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:border-[#ad2c00]"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("loginPassword")}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-xl text-gray-500 hover:text-gray-700"
-                    >
-                      👁️
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 rounded-2xl text-white font-bold text-lg bg-gradient-to-r from-[#ad2c00] to-[#d34011] hover:brightness-105 transition-all"
-                >
-                  Đăng nhập vào bếp
-                </button>
-              </form>
-            )}
-
-            {/* ==================== REGISTER FORM ==================== */}
-            {!isLogin && (
-              <form onSubmit={handleRegister} className="space-y-6">
-                <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">
-                    👤 Tên đăng nhập
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full bg-white/80 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:border-[#ad2c00]"
-                    placeholder="mychef123"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">
-                    🥗 Địa chỉ Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full bg-white/80 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:border-[#ad2c00]"
-                    placeholder="customer123@gmail.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">
-                    🔑 Mật khẩu
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="regPassword"
-                      type="password"
-                      required
-                      className="w-full bg-white/80 border border-gray-200 rounded-2xl px-5 py-4 focus:outline-none focus:border-[#ad2c00]"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("regPassword")}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-xl text-gray-500 hover:text-gray-700"
-                    >
-                      👁️
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" id="terms" className="w-5 h-5 accent-[#ad2c00]" />
-                  <label htmlFor="terms" className="text-sm text-gray-600">
-                    Tôi đồng ý với Điều khoản dịch vụ &amp; Chính sách bảo mật
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 rounded-2xl text-white font-bold text-lg bg-gradient-to-r from-[#ad2c00] to-[#d34011] hover:brightness-105 transition-all"
-                >
-                  Tạo tài khoản của tôi 🍳
-                </button>
-              </form>
-            )}
+              <Link
+                to="/signup"
+                className="w-full py-4 rounded-xl bg-surface-container-high text-on-surface font-bold text-lg hover:bg-surface-container-highest transition-all active:scale-[0.98] flex items-center justify-center"
+              >
+                Create Your Account
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
