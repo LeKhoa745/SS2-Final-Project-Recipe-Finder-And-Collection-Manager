@@ -13,6 +13,9 @@ export default function OAuthCallback() {
       
       // Fetch user info từ /api/auth/me (refreshToken in cookie)
       fetch('http://localhost:5000/api/auth/me', { 
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include' 
       })
         .then(res => res.json())

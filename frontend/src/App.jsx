@@ -6,6 +6,8 @@ import Search from "./pages/Search";
 import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import OAuthCallback from "./pages/OAuthCallback";
+
 
 // Hide the global Navbar on auth pages (they have their own headers)
 function AppLayout() {
