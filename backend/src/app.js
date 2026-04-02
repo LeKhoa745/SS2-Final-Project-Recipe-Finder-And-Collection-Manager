@@ -28,7 +28,6 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(passport.initialize());
-app.use(passport.session());
 
 // ── Logging ───────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {

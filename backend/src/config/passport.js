@@ -46,16 +46,4 @@ passport.use(
   )
 );
 
-passport.serializeUser((user, done) => done(null, user.id));
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const { UserModel } = await import('../models/user.model.js');
-    const user = await UserModel.findById(id);
-    done(null, user);
-  } catch (err) {
-    done(err);
-  }
-});
-
 export default passport;
