@@ -24,6 +24,10 @@ function addRetryInterceptor(client, name) {
     (res) => res,
     async (err) => {
       const config = err.config;
+
+      // If no config (e.g. cancelled request), just reject
+      if (!config) return Promise.reject(err);
+
       config._retryCount = config._retryCount || 0;
 
       // Retry on 429 (rate limit) and 5xx

@@ -28,7 +28,8 @@ router.post('/logout',   AuthController.logout);
 router.get('/me',        protect, AuthController.me);
 
 // Google OAuth2
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+
 router.get('/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/login?error=oauth` }),
   AuthController.googleCallback
