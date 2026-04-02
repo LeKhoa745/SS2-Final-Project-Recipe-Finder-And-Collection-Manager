@@ -22,6 +22,7 @@ function AppLayout() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
       </Routes>
     </>
   );
@@ -35,4 +36,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;
