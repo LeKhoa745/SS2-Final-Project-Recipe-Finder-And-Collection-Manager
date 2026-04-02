@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
-  const emailRef    = useRef();
+  const emailRef = useRef();
   const passwordRef = useRef();
-  const [error,   setError]   = useState("");
+  
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -12,16 +13,17 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    const email    = emailRef.current.value.trim();
+    const email = emailRef.current.value.trim();
     const password = passwordRef.current.value;
 
     setLoading(true);
+
     try {
       const res = await fetch("/api/auth/login", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password }),
-        credentials: "include", // needed for the refreshToken httpOnly cookie
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -31,17 +33,23 @@ export default function Login() {
         return;
       }
 
-      // Store access token and user info for authenticated requests
       localStorage.setItem("accessToken", data.data.accessToken);
       localStorage.setItem("user", JSON.stringify(data.data.user));
 
-      alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name}!`);
+      alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name || email}!`);
       navigate("/");
     } catch (err) {
-      setError("⚠️ Cannot reach the server. Make sure the backend is running on port 5000.");
+      setError("⚠️ Cannot reach the server. Please try again later.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Google Login Handler
+  const handleGoogleLogin = () => {
+    // Redirect to Google OAuth endpoint on your backend
+    window.location.href = "http://localhost:5000/api/auth/google"; 
+    // Hoặc nếu bạn deploy: "https://your-backend.com/api/auth/google"
   };
 
   return (
@@ -56,7 +64,7 @@ export default function Login() {
         </div>
       </header>
 
-      <main className="flex-grow flex items-center justify-center relative p-4 md:p-8 min-h-screen">
+      <main className="flex-grow flex items-center justify-center relative p-4 md:p-8">
         {/* Background */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
@@ -69,10 +77,10 @@ export default function Login() {
         </div>
 
         <div className="container mx-auto z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Login Card */}
+          {/* Login Card - Thiết kế giống ảnh bạn gửi */}
           <div className="lg:col-span-5 lg:col-start-8">
-            <div className="glass-panel rounded-xl p-8 md:p-12 shadow-2xl border border-white/15">
-              <h3 className="font-headline text-2xl font-bold text-on-surface mb-8">
+            <div className="glass-panel rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20 backdrop-blur-xl">
+              <h3 className="font-headline text-3xl font-bold text-on-surface mb-8">
                 Welcome Back
               </h3>
 
@@ -80,78 +88,74 @@ export default function Login() {
                 {/* Email */}
                 <div className="space-y-2">
                   <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
-                    <span>🥗</span> Email Address
+                    🥗 EMAIL ADDRESS
                   </label>
-                  <div className="relative group">
-                    <input
-                      ref={emailRef}
-                      id="email"
-                      type="email"
-                      required
-                      placeholder="customer123@gmail.com"
-                      className="w-full bg-surface-container-low border-none rounded-md px-4 py-4 focus:ring-0 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none"
-                    />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-focus-within:w-full" />
-                  </div>
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    required
+                    placeholder="customer123@gmail.com"
+                    className="w-full bg-white/70 border border-gray-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-orange-500 outline-none text-on-surface placeholder:text-gray-400"
+                  />
                 </div>
 
                 {/* Password */}
                 <div className="space-y-2">
                   <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
-                    <span>🔑</span> Password
+                    🔑 PASSWORD
                   </label>
-                  <div className="relative group">
-                    <input
-                      ref={passwordRef}
-                      id="password"
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      className="w-full bg-surface-container-low border-none rounded-md px-4 py-4 focus:ring-0 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none"
-                    />
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-focus-within:w-full" />
-                  </div>
-                  <div className="flex justify-end mt-2">
-                    <a href="#" className="text-sm font-bold text-primary hover:underline underline-offset-4 decoration-2">
+                  <input
+                    ref={passwordRef}
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    className="w-full bg-white/70 border border-gray-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-orange-500 outline-none text-on-surface placeholder:text-gray-400"
+                  />
+                  <div className="flex justify-end">
+                    <a href="#" className="text-sm font-bold text-orange-600 hover:underline">
                       Forgot password?
                     </a>
                   </div>
                 </div>
 
-                {/* Error message */}
                 {error && (
-                  <p className="text-red-600 text-sm font-medium bg-red-50 rounded-lg p-3">
+                  <p className="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-xl">
                     {error}
                   </p>
                 )}
 
+                {/* Login Button - Màu cam đỏ giống ảnh */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="primary-gradient w-full py-4 rounded-xl text-on-primary font-bold text-lg hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-lg transition-all active:scale-[0.98] shadow-lg disabled:opacity-70"
                 >
-                  {loading ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
-                      Logging in...
-                    </>
-                  ) : (
-                    "Login to Kitchen"
-                  )}
+                  {loading ? "Logging in..." : "Login to Kitchen"}
                 </button>
               </form>
 
+              {/* Google Login Button - Thêm ngay dưới nút Login */}
+              <button
+                onClick={handleGoogleLogin}
+                className="mt-4 w-full py-4 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center gap-3 text-sm font-semibold text-gray-700 transition-all"
+              >
+                <img
+                  src="https://www.svgrepo.com/show/475656/google-color.svg"
+                  alt="Google"
+                  className="w-5 h-5"
+                />
+                Continue with Google
+              </button>
+
               <div className="flex items-center gap-4 py-6">
-                <div className="h-px flex-grow bg-outline-variant/30" />
-                <span className="font-label text-xs text-on-surface-variant/60 uppercase">
-                  New to Recipe Finder?
-                </span>
-                <div className="h-px flex-grow bg-outline-variant/30" />
+                <div className="h-px flex-grow bg-gray-300" />
+                <span className="font-label text-xs text-gray-500 uppercase">NEW TO RECIPE FINDER?</span>
+                <div className="h-px flex-grow bg-gray-300" />
               </div>
 
               <Link
                 to="/signup"
-                className="w-full py-4 rounded-xl bg-surface-container-high text-on-surface font-bold text-lg hover:bg-surface-container-highest transition-all active:scale-[0.98] flex items-center justify-center"
+                className="w-full py-4 rounded-2xl bg-white border border-gray-300 text-on-surface font-bold text-lg hover:bg-gray-50 transition-all active:scale-[0.98] flex items-center justify-center"
               >
                 Create Your Account
               </Link>
