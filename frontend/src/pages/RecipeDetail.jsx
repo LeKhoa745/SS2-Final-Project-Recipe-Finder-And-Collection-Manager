@@ -38,7 +38,7 @@ export default function RecipeDetail() {
         try {
           const wlData = await wishlistService.check(id);
           setIsWishlisted(wlData.data.exists);
-        } catch (wlErr) {
+        } catch {
           // ignore if user not logged in
         }
 
