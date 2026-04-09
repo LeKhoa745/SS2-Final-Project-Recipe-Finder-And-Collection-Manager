@@ -8,6 +8,7 @@ const router = Router();
 
 router.use(apiLimiter);
 
+router.get('/status', RecipeController.getStatus);
 router.get('/search',
   [query('q').optional().trim(), query('page').optional().isInt({ min: 1 })],
   handleValidationErrors,
