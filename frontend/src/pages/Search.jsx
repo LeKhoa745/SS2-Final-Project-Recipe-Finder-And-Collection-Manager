@@ -48,6 +48,8 @@ export default function Search() {
               <RecipeCard key={r.id} title={r.title} image={r.image} id={r.id} />
             ))}
           </div>
+        ) : !loading && !error && searchParams.get("q") ? (
+          <p className="text-center text-gray-500 text-xl py-20">We don't have such dish/ingredient yet.</p>
         ) : !loading && !error && (
           <p className="text-center text-gray-500 text-xl py-20">Nhập từ khóa để tìm công thức 🍳</p>
         )}
