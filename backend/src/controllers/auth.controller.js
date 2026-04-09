@@ -1,5 +1,6 @@
 import { AuthService } from '../services/auth.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { AppError } from '../utils/errors.js';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -61,6 +62,34 @@ export const AuthController = {
       const { UserModel } = await import('../models/user.model.js');
       const user = await UserModel.findById(req.user.id);
       sendSuccess(res, { user });
+    } catch (err) { next(err); }
+  },
+
+  async updateMe(req, res, next) {
+    try {
+      const { UserModel } = await import('../models/user.model.js');
+      const currentUser = await UserModel.findById(req.user.id);
+
+      if (!currentUser) {
+        throw new AppError('User not found', 404);
+      }
+
+      const nextName = req.body.name ?? currentUser.name;
+      const nextEmail = req.body.email ?? currentUser.email;
+      const nextAvatar = req.body.avatar ?? currentUser.avatar;
+
+      const existing = await UserModel.findByEmail(nextEmail);
+      if (existing && existing.id !== req.user.id) {
+        throw new AppError('Email already registered', 409);
+      }
+
+      const user = await UserModel.updateProfile(req.user.id, {
+        name: nextName,
+        email: nextEmail,
+        avatar: nextAvatar,
+      });
+
+      sendSuccess(res, { user }, 'Profile updated successfully');
     } catch (err) { next(err); }
   },
 
