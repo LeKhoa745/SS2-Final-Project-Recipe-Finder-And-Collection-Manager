@@ -12,9 +12,14 @@ export const RecipeService = {
     try {
       if (isMockEnabled()) {
         logger.info('Using Mock Data for recipe search');
+        let filteredResults = MOCK_SEARCH_RESULTS;
+        if (query) {
+          const q = query.toLowerCase();
+          filteredResults = MOCK_SEARCH_RESULTS.filter(r => r.title.toLowerCase().includes(q));
+        }
         return {
-          results: MOCK_SEARCH_RESULTS,
-          totalResults: MOCK_SEARCH_RESULTS.length,
+          results: filteredResults,
+          totalResults: filteredResults.length,
           page,
           limit,
           totalPages: 1,
@@ -45,9 +50,14 @@ export const RecipeService = {
     } catch (err) {
       if (err.response?.status === 402) {
         logger.warn('Spoonacular API limit reached (402). Falling back to Mock Data.');
+        let filteredResults = MOCK_SEARCH_RESULTS;
+        if (query) {
+          const q = query.toLowerCase();
+          filteredResults = MOCK_SEARCH_RESULTS.filter(r => r.title.toLowerCase().includes(q));
+        }
         return {
-          results: MOCK_SEARCH_RESULTS,
-          totalResults: MOCK_SEARCH_RESULTS.length,
+          results: filteredResults,
+          totalResults: filteredResults.length,
           page,
           limit,
           totalPages: 1,

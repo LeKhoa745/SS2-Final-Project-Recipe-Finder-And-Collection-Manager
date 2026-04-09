@@ -49,9 +49,9 @@ export default function Search() {
             ))}
           </div>
         ) : !loading && !error && searchParams.get("q") ? (
-          <p className="text-center text-gray-500 text-xl py-20">We don't have such dish/ingredient yet.</p>
+          <p className="text-center text-gray-500 text-xl py-20">Recipe not found.</p>
         ) : !loading && !error && (
-          <p className="text-center text-gray-500 text-xl py-20">Nhập từ khóa để tìm công thức 🍳</p>
+          <p className="text-center text-gray-500 text-xl py-20">Enter keyword to search for recipes 🍳</p>
         )}
       </div>
     </div>
