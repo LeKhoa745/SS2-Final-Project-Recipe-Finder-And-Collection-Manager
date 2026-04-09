@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { setSession } from "../utils/session";
 
 export default function Login() {
   const emailRef = useRef();
@@ -33,8 +34,10 @@ export default function Login() {
         return;
       }
 
-      localStorage.setItem("accessToken", data.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(data.data.user));
+      setSession({
+        accessToken: data.data.accessToken,
+        user: data.data.user,
+      });
 
       alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name || email}!`);
       navigate("/");

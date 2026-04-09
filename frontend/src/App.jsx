@@ -7,11 +7,7 @@ import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
-<<<<<<< Updated upstream
-
-=======
 import ProfileSettings from "./pages/ProfileSettings";
->>>>>>> Stashed changes
 
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
