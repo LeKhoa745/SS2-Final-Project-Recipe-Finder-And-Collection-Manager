@@ -7,6 +7,7 @@ import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
+import RecipeDetail from "./pages/RecipeDetail";
 
 
 // Hide the global Navbar on auth pages (they have their own headers)
@@ -22,6 +23,7 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/recipe/:id" element={<RecipeDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />

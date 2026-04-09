@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
 export default function RecipeCard({ id, title, image, onWishlist }) {
+  const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +44,10 @@ export default function RecipeCard({ id, title, image, onWishlist }) {
   };
 
   return (
-    <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-orange-50 flex flex-col h-full cursor-pointer">
+    <div 
+      onClick={() => { if (id) navigate(`/recipe/${id}`) }}
+      className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-orange-50 flex flex-col h-full cursor-pointer"
+    >
       <div className="relative h-56 overflow-hidden">
         <img
           src={image || "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&q=80&w=600"}
