@@ -20,12 +20,19 @@ const loginRules = [
   body('password').notEmpty(),
 ];
 
+const updateProfileRules = [
+  body('name').optional().trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }),
+  body('email').optional().isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('avatar').optional({ nullable: true }).trim().isLength({ max: 500 }).withMessage('Avatar URL is too long'),
+];
+
 // ── Routes ────────────────────────────────────────────────────
 router.post('/register', authLimiter, registerRules, handleValidationErrors, AuthController.register);
 router.post('/login',    authLimiter, loginRules,    handleValidationErrors, AuthController.login);
 router.post('/refresh',  AuthController.refresh);
 router.post('/logout',   AuthController.logout);
 router.get('/me',        protect, AuthController.me);
+router.patch('/me',      protect, updateProfileRules, handleValidationErrors, AuthController.updateMe);
 
 // Google OAuth2
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));

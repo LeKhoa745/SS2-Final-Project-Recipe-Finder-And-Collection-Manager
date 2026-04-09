@@ -7,13 +7,13 @@ import Wishlist from "./pages/Wishlist";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthCallback from "./pages/OAuthCallback";
+import ProfileSettings from "./pages/ProfileSettings";
 
-
-// Hide the global Navbar on auth pages (they have their own headers)
+// Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
   const location = useLocation();
-  const authPaths = ["/login", "/signup"];
-  const hideNav = authPaths.includes(location.pathname);
+  const chromeLessPaths = ["/login", "/signup", "/settings"];
+  const hideNav = chromeLessPaths.includes(location.pathname);
 
   return (
     <>
@@ -22,6 +22,7 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/settings" element={<ProfileSettings />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />

@@ -35,6 +35,14 @@ export const UserModel = {
     return this.findById(userId);
   },
 
+  async updateProfile(userId, { name, email, avatar }) {
+    await pool.query(
+      'UPDATE users SET name = ?, email = ?, avatar = ? WHERE id = ?',
+      [name, email, avatar || null, userId]
+    );
+    return this.findById(userId);
+  },
+
   async saveRefreshToken(userId, token, expiresAt) {
     await pool.query(
       'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
