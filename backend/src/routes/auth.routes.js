@@ -23,7 +23,24 @@ const loginRules = [
 const updateProfileRules = [
   body('name').optional().trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }),
   body('email').optional().isEmail().normalizeEmail().withMessage('Valid email required'),
-  body('avatar').optional({ nullable: true }).trim().isLength({ max: 500 }).withMessage('Avatar URL is too long'),
+  body('avatar')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (!value) return true;
+      const isUrl = /^https?:\/\/.+/i.test(value);
+      const isDataImage = /^data:image\/[a-zA-Z+]+;base64,/.test(value);
+      if (!isUrl && !isDataImage) {
+        throw new Error('Avatar must be an image URL or uploaded image data');
+      }
+      if (value.length > 200000) {
+        throw new Error('Avatar image is too large');
+      }
+      return true;
+    }),
+  body('phone')
+    .optional({ nullable: true })
+    .matches(/^\+84\d{9}$/)
+    .withMessage('Phone number must use +84 and contain exactly 9 digits after it'),
 ];
 
 // ── Routes ────────────────────────────────────────────────────
