@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { setSession } from "../utils/session";
 
 const REQUIREMENTS = [
   { id: "length",    text: "At least 8 characters",                test: (p) => p.length >= 8 },
@@ -71,8 +72,10 @@ export default function Signup() {
       }
 
       // Store the access token for authenticated requests later
-      localStorage.setItem("accessToken", data.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(data.data.user));
+      setSession({
+        accessToken: data.data.accessToken,
+        user: data.data.user,
+      });
 
       alert(`✅ Account created successfully!\nWelcome, ${data.data.user.name}! You can now log in.`);
       navigate("/login");
