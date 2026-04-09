@@ -13,7 +13,7 @@ export default function RecipeCard({ id, title, image, onWishlist }) {
       try {
         const { data } = await wishlistService.check(id);
         setIsWishlisted(data.exists);
-      } catch (err) {
+      } catch {
         // Silently fail if not logged in or check fails
       }
     };
