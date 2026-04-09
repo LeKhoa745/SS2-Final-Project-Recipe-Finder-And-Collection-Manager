@@ -77,6 +77,7 @@ export const AuthController = {
       const nextName = req.body.name ?? currentUser.name;
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
+      const nextPhone = req.body.phone ?? currentUser.phone;
 
       const existing = await UserModel.findByEmail(nextEmail);
       if (existing && existing.id !== req.user.id) {
@@ -87,6 +88,7 @@ export const AuthController = {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
+        phone: nextPhone,
       });
 
       sendSuccess(res, { user }, 'Profile updated successfully');
