@@ -1,17 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { recipeService } from "../api/recipeService";
 import RecipeCard from "../components/RecipeCard";
 import SearchBar from "../components/SearchBar";
 
 export default function Search() {
+  const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSearch = async () => {
-    // Demo data (replace with real API later)
-    setRecipes([
-      { id: 1, title: "Pasta Carbonara", image: "https://picsum.photos/id/292/600/400" },
-      { id: 2, title: "Beef Stir Fry", image: "https://picsum.photos/id/431/600/400" },
-      { id: 3, title: "Shrimp Tacos", image: "https://picsum.photos/id/1080/600/400" },
-    ]);
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      handleSearch(q);
+    }
+  }, [searchParams]);
+
+  const handleSearch = async (query) => {
+    if (!query) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await recipeService.search({ q: query });
+      setRecipes(data.data.results || []);
+    } catch (err) {
+      console.error('Search failed:', err);
+      setError('❌ Failed to fetch recipes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -19,13 +38,19 @@ export default function Search() {
       <SearchBar onSearch={handleSearch} />
       
       <div className="max-w-7xl mx-auto px-6 py-12">
-        {recipes.length > 0 ? (
+        {loading && <p className="text-center text-orange-600 text-xl py-20">Searching recipes... 🍳</p>}
+        
+        {error && <p className="text-center text-red-500 text-xl py-20">{error}</p>}
+
+        {!loading && !error && recipes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {recipes.map((r) => (
-              <RecipeCard key={r.id} title={r.title} image={r.image} />
+              <RecipeCard key={r.id} title={r.title} image={r.image} id={r.id} />
             ))}
           </div>
-        ) : (
+        ) : !loading && !error && searchParams.get("q") ? (
+          <p className="text-center text-gray-500 text-xl py-20">We don't have such dish/ingredient yet.</p>
+        ) : !loading && !error && (
           <p className="text-center text-gray-500 text-xl py-20">Nhập từ khóa để tìm công thức 🍳</p>
         )}
       </div>
