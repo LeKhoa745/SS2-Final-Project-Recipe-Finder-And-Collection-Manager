@@ -37,7 +37,7 @@ export default function RecipeDetail() {
         // Check if wishlisted
         try {
           const wlData = await wishlistService.check(id);
-          setIsWishlisted(wlData.data.exists);
+          setIsWishlisted(wlData.data.saved);
         } catch {
           // ignore if user not logged in
         }
@@ -61,7 +61,14 @@ export default function RecipeDetail() {
         await wishlistService.remove(id);
         setIsWishlisted(false);
       } else {
-        await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, image: recipe.image });
+        await wishlistService.add({
+          recipeId: id,
+          recipeTitle: recipe.title,
+          recipeImage: recipe.image,
+          readyInMinutes: recipe.readyInMinutes,
+          servings: recipe.servings,
+          sourceUrl: recipe.sourceUrl,
+        });
         setIsWishlisted(true);
       }
     } catch (err) {
@@ -266,7 +273,8 @@ export default function RecipeDetail() {
                   key={item.id} 
                   id={item.id} 
                   title={item.title} 
-                  image={`https://spoonacular.com/recipeImages/${item.id}-556x370.${item.imageType || 'jpg'}`} 
+                  image={`https://spoonacular.com/recipeImages/${item.id}-556x370.${item.imageType || 'jpg'}`}
+                  readyInMinutes={item.readyInMinutes}
                 />
               ))}
             </div>

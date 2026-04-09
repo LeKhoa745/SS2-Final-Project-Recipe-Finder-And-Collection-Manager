@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import RecipeCard from "../components/RecipeCard";
 import { wishlistService } from "../api/wishlistService";
 
@@ -12,11 +13,12 @@ export default function Wishlist() {
       try {
         setLoading(true);
         const data = await wishlistService.getAll();
-        // Backend returns items with recipeId, recipeTitle, image
-        const formattedItems = (data.data || []).map(item => ({
-          id: item.recipeId,
-          title: item.recipeTitle,
-          image: item.image
+        // Backend returns { items: [...], total: N } inside data.data
+        const formattedItems = (data.data?.items || []).map(item => ({
+          id: item.recipe_id,
+          title: item.recipe_title,
+          image: item.recipe_image,
+          readyInMinutes: item.ready_in_min,
         }));
         setWishlistItems(formattedItems);
       } catch (err) {
@@ -47,7 +49,7 @@ export default function Wishlist() {
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-orange-50">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
-            <a href="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</a>
+            <Link to="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</Link>
           </div>
         ) : wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -56,7 +58,8 @@ export default function Wishlist() {
                 key={item.id} 
                 id={item.id} 
                 title={item.title} 
-                image={item.image} 
+                image={item.image}
+                readyInMinutes={item.readyInMinutes}
               />
             ))}
           </div>
@@ -65,7 +68,7 @@ export default function Wishlist() {
             <div className="text-8xl mb-8">🥘</div>
             <h2 className="text-3xl font-bold text-[#2d1b11]">Your collection is empty</h2>
             <p className="text-gray-500 mt-4 text-lg">Browse thousands of recipes and save your favorites here!</p>
-            <a href="/search" className="mt-8 inline-block bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">Start Exploring</a>
+            <Link to="/search" className="mt-8 inline-block bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">Start Exploring</Link>
           </div>
         )}
       </div>

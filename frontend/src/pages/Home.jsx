@@ -17,7 +17,7 @@ export default function Home() {
     const fetchNews = async () => {
       try {
         const data = await newsService.getHeadlines();
-        setNews(data.data || []);
+        setNews(data.data?.articles || []);
       } catch (err) {
         console.error("Failed to fetch news:", err);
       } finally {
@@ -173,24 +173,28 @@ export default function Home() {
             id="716429"
             title="Pasta with Garlic and Oil"
             image="https://spoonacular.com/recipeImages/716429-556x370.jpg"
+            readyInMinutes={45}
             onWishlist={() => handleWishlist("Pasta with Garlic and Oil")}
           />
           <RecipeCard
             id="715538"
             title="What to Expect When You're Expecting"
             image="https://spoonacular.com/recipeImages/715538-556x370.jpg"
+            readyInMinutes={30}
             onWishlist={() => handleWishlist("Pork Chops")}
           />
           <RecipeCard
             id="782585"
             title="Cannellini Bean and Kale Soup"
             image="https://spoonacular.com/recipeImages/782585-556x370.jpg"
+            readyInMinutes={45}
             onWishlist={() => handleWishlist("Bean Soup")}
           />
           <RecipeCard
             id="715415"
             title="Red Lentil Soup with Chicken and Spinach"
             image="https://spoonacular.com/recipeImages/715415-556x370.jpg"
+            readyInMinutes={55}
             onWishlist={() => handleWishlist("Red Lentil Soup")}
           />
         </div>

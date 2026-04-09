@@ -51,8 +51,7 @@ export default function Login() {
   // Google Login Handler
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth endpoint on your backend
-    window.location.href = "http://localhost:5000/api/auth/google"; 
-    // Hoặc nếu bạn deploy: "https://your-backend.com/api/auth/google"
+    window.location.href = "/api/auth/google";
   };
 
   return (

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
-export default function RecipeCard({ id, title, image, onWishlist }) {
+export default function RecipeCard({ id, title, image, readyInMinutes, onWishlist }) {
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -12,7 +12,7 @@ export default function RecipeCard({ id, title, image, onWishlist }) {
     const checkWishlist = async () => {
       try {
         const { data } = await wishlistService.check(id);
-        setIsWishlisted(data.exists);
+        setIsWishlisted(data.saved);
       } catch {
         // Silently fail if not logged in or check fails
       }
@@ -67,7 +67,7 @@ export default function RecipeCard({ id, title, image, onWishlist }) {
       <div className="p-5 flex flex-col flex-grow">
         <h3 className="font-bold text-xl line-clamp-2 mb-3 text-[#2d1b11] group-hover:text-orange-600 transition-colors leading-tight">{title}</h3>
         <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 font-medium">
-          <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> 25 mins</span>
+          <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> {readyInMinutes ? `${readyInMinutes} mins` : 'N/A'}</span>
           <span className="font-bold text-orange-500 flex items-center gap-0.5">Explore <span className="translate-y-[0.5px]">→</span></span>
         </div>
       </div>
