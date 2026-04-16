@@ -8,6 +8,7 @@ export default function Login() {
   
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -41,7 +42,7 @@ export default function Login() {
 
       alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name || email}!`);
       navigate("/");
-    } catch (err) {
+    } catch {
       setError("⚠️ Cannot reach the server. Please try again later.");
     } finally {
       setLoading(false);
@@ -107,13 +108,24 @@ export default function Login() {
                   <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
                     🔑 PASSWORD
                   </label>
-                  <input
-                    ref={passwordRef}
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    className="w-full bg-white/70 border border-gray-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-orange-500 outline-none text-on-surface placeholder:text-gray-400"
-                  />
+                  <div className="relative">
+                    <input
+                      ref={passwordRef}
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="••••••••"
+                      className="w-full bg-white/70 border border-gray-200 rounded-2xl px-5 py-4 pr-12 focus:ring-2 focus:ring-orange-500 outline-none text-on-surface placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined">
+                        {showPassword ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
+                  </div>
                   <div className="flex justify-end">
                     <a href="#" className="text-sm font-bold text-orange-600 hover:underline">
                       Forgot password?

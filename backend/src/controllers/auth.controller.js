@@ -77,6 +77,7 @@ export const AuthController = {
       const nextName = req.body.name ?? currentUser.name;
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
+      const nextPhone = req.body.phone ?? currentUser.phone;
 
       const existing = await UserModel.findByEmail(nextEmail);
       if (existing && existing.id !== req.user.id) {
@@ -87,9 +88,49 @@ export const AuthController = {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
+        phone: nextPhone,
       });
 
+      // Handle password update if provided
+      const { oldPassword, newPassword } = req.body;
+      if (newPassword) {
+        await AuthService.updatePassword({ userId: req.user.id, oldPassword, newPassword });
+      }
+
       sendSuccess(res, { user }, 'Profile updated successfully');
+    } catch (err) { next(err); }
+  },
+
+  async updatePassword(req, res, next) {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      await AuthService.updatePassword({ userId: req.user.id, oldPassword, newPassword });
+      
+      const { UserModel } = await import('../models/user.model.js');
+      const user = await UserModel.findById(req.user.id);
+      sendSuccess(res, { user }, 'Password updated successfully');
+    } catch (err) { next(err); }
+  },
+
+  async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        throw new AppError('No image file provided', 400);
+      }
+      
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      const { UserModel } = await import('../models/user.model.js');
+      const currentUser = await UserModel.findById(req.user.id);
+      
+      await UserModel.updateProfile(req.user.id, {
+        name: currentUser.name,
+        email: currentUser.email,
+        phone: currentUser.phone,
+        avatar: avatarUrl
+      });
+      
+      const user = await UserModel.findById(req.user.id);
+      sendSuccess(res, { user, avatarUrl }, 'Avatar uploaded successfully');
     } catch (err) { next(err); }
   },
 

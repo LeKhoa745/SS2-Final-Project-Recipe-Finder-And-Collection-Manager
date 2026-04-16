@@ -11,6 +11,7 @@ import OAuthCallback from "./pages/OAuthCallback";
 import ProfileSettings from "./pages/ProfileSettings";
 
 import RecipeDetail from "./pages/RecipeDetail";
+import Collection from "./pages/Collection";
 
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
@@ -29,6 +30,7 @@ function AppLayout() {
         <Route path="/settings" element={<ProfileSettings />} />
 
         <Route path="/recipe/:id" element={<RecipeDetail />} />
+        <Route path="/collection" element={<Collection />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

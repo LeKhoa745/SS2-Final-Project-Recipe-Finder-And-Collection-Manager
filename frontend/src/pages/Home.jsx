@@ -109,12 +109,12 @@ export default function Home() {
           )}
 
           <h1 className="mb-4 text-6xl font-bold tracking-tight">
-            Kham pha cong thuc
+            Discover delicious recipes
             <br />
-            ngon moi ngay
+            every day
           </h1>
           <p className="mx-auto max-w-md text-xl">
-            Hang ngan cong thuc • Luu vao bo suu tap • Nau ngay hom nay
+            Thousands of recipes • Save to collection • Cook today
           </p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function Home() {
         </div>
 
         <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-3xl font-bold text-[#2d1b11]">
-          Mon ngon noi bat
+          Featured Recipes
         </h2>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <RecipeCard
