@@ -27,16 +27,19 @@ const updateProfileRules = [
     .optional({ nullable: true })
     .custom((value) => {
       if (!value) return true;
-      const isUrl = /^https?:\/\/.+/i.test(value);
-      const isDataImage = /^data:image\/[a-zA-Z+]+;base64,/.test(value);
-      if (!isUrl && !isDataImage) {
-        throw new Error('Avatar must be an image URL or uploaded image data');
+      const isDataImage = /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value);
+      if (!isDataImage) {
+        throw new Error('Avatar must be a JPG, PNG, or WebP image');
       }
       if (value.length > 200000) {
         throw new Error('Avatar image is too large');
       }
       return true;
     }),
+  body('password')
+    .optional({ nullable: true })
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters'),
   body('phone')
     .optional({ nullable: true })
     .matches(/^\+84\d{9}$/)

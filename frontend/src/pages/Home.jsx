@@ -5,6 +5,17 @@ import RecipeCard from "../components/RecipeCard";
 import { newsService } from "../api/newsService";
 import { getStoredUser } from "../utils/session";
 
+function getAvatarFallback(name = "User") {
+  const initial = (name || "User").trim().charAt(0).toUpperCase() || "U";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="60" fill="#fff1eb" />
+      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#ad2c00">${initial}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const profileMenuRef = useRef(null);
@@ -75,7 +86,7 @@ export default function Home() {
                   className="flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition hover:bg-white/15"
                 >
                   <img
-                    src={user.avatar || "https://ui-avatars.com/api/?background=fff1eb&color=ad2c00&name=User"}
+                    src={user.avatar || getAvatarFallback(user.name)}
                     alt={user.name || "User avatar"}
                     className="h-11 w-11 rounded-full object-cover ring-2 ring-white/40"
                   />
