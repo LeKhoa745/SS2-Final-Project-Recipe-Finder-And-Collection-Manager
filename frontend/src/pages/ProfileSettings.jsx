@@ -22,7 +22,14 @@ function getPhoneDigits(phone) {
 }
 
 function getAvatarFallback(name = "Chef") {
-  return `https://ui-avatars.com/api/?background=fff1eb&color=954b00&name=${encodeURIComponent(name)}`;
+  const initial = (name || "Chef").trim().charAt(0).toUpperCase() || "C";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="60" fill="#fff1eb" />
+      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#954b00">${initial}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default function ProfileSettings() {
@@ -33,6 +40,8 @@ export default function ProfileSettings() {
     email: "",
     avatar: "",
     phoneDigits: "",
+    newPassword: "",
+    confirmNewPassword: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -49,6 +58,8 @@ export default function ProfileSettings() {
         email: storedUser?.email || "",
         avatar: storedUser?.avatar || "",
         phoneDigits: getPhoneDigits(storedUser?.phone),
+        newPassword: "",
+        confirmNewPassword: "",
       });
     };
 
@@ -68,6 +79,9 @@ export default function ProfileSettings() {
       ? user.avatar
       : getAvatarFallback(formData.fullName || user?.name || "Chef");
 
+  const isPasswordChange = Boolean(formData.newPassword || formData.confirmNewPassword);
+  const passwordMismatch = isPasswordChange && formData.newPassword !== formData.confirmNewPassword;
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setMessage("");
@@ -79,10 +93,6 @@ export default function ProfileSettings() {
       return;
     }
 
-    if (name === "avatar") {
-      setAvatarLoadFailed(false);
-    }
-
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
@@ -90,8 +100,10 @@ export default function ProfileSettings() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file for your avatar.");
+    const acceptedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!acceptedTypes.includes(file.type)) {
+      setError("Please choose a JPG, PNG, or WebP image for your avatar.");
+      event.target.value = "";
       return;
     }
 
@@ -113,27 +125,43 @@ export default function ProfileSettings() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (passwordMismatch) {
+      setMessage("");
+      setError("😢 Passwords do not match.");
+      return;
+    }
+
     setSaving(true);
     setMessage("");
     setError("");
 
     try {
+      const nextPassword = formData.newPassword.trim();
       const response = await apiClient("/auth/me", {
         method: "PATCH",
         body: JSON.stringify({
           name: formData.fullName.trim(),
           email: formData.email.trim(),
-          avatar: formData.avatar.trim(),
+          avatar: formData.avatar,
           phone: formData.phoneDigits ? `+84${formData.phoneDigits}` : null,
+          password: nextPassword || undefined,
         }),
       });
 
       setUser(response.data.user);
       updateStoredUser(response.data.user);
       setAvatarLoadFailed(false);
-      setMessage("Profile updated successfully.");
+      setFormData((current) => ({
+        ...current,
+        avatar: response.data.user.avatar || "",
+        newPassword: "",
+        confirmNewPassword: "",
+      }));
+      setMessage(nextPassword ? "😊 New password has been updated!" : "Profile updated successfully.");
     } catch (apiError) {
-      setError(apiError.message || "Unable to update profile right now.");
+      const validationMessage = apiError.data?.errors?.[0]?.message;
+      setError(validationMessage || apiError.message || "Unable to update profile right now.");
     } finally {
       setSaving(false);
     }
@@ -146,6 +174,8 @@ export default function ProfileSettings() {
       email: user?.email || "",
       avatar: user?.avatar || "",
       phoneDigits: getPhoneDigits(user?.phone),
+      newPassword: "",
+      confirmNewPassword: "",
     });
     setMessage("");
     setError("");
@@ -279,7 +309,7 @@ export default function ProfileSettings() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                 onChange={handleAvatarFileChange}
                 className="hidden"
               />
@@ -300,7 +330,7 @@ export default function ProfileSettings() {
               </button>
 
               <p className="mt-8 text-xs leading-relaxed text-[#655f47]">
-                Upload an image or paste an avatar URL below.
+                Upload a JPG, PNG, or WebP image from your device.
                 <br />
                 Changes save to your account.
               </p>
@@ -348,24 +378,6 @@ export default function ProfileSettings() {
 
                 <div>
                   <label
-                    htmlFor="avatar"
-                    className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                  >
-                    Avatar URL
-                  </label>
-                  <input
-                    id="avatar"
-                    name="avatar"
-                    type="text"
-                    value={formData.avatar}
-                    onChange={handleChange}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                  />
-                </div>
-
-                <div>
-                  <label
                     htmlFor="phoneDigits"
                     className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
                   >
@@ -388,6 +400,50 @@ export default function ProfileSettings() {
                   <p className="mt-2 text-sm text-[#655f47]">
                     Enter 9 digits after +84.
                   </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="newPassword"
+                    className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                  >
+                    New Password
+                  </label>
+                  <input
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                    placeholder="Enter your new password"
+                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                  />
+                  <p className="mt-2 text-sm text-[#655f47]">
+                    Leave this blank if you do not want to change your password.
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="confirmNewPassword"
+                    className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                  >
+                    Confirm New Password
+                  </label>
+                  <input
+                    id="confirmNewPassword"
+                    name="confirmNewPassword"
+                    type="password"
+                    value={formData.confirmNewPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm your new password"
+                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                  />
+                  {isPasswordChange && (
+                    <p className={`mt-2 text-sm font-medium ${passwordMismatch ? "text-red-700" : "text-green-700"}`}>
+                      {passwordMismatch ? "😢 Passwords do not match." : "😊 New password has been updated!"}
+                    </p>
+                  )}
                 </div>
 
                 {message && (

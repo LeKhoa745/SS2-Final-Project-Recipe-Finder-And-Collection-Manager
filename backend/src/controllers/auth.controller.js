@@ -1,6 +1,7 @@
 import { AuthService } from '../services/auth.service.js';
 import { sendSuccess } from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
+import bcrypt from 'bcryptjs';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -78,17 +79,21 @@ export const AuthController = {
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
       const nextPhone = req.body.phone ?? currentUser.phone;
+      const nextPassword = typeof req.body.password === 'string' ? req.body.password.trim() : '';
 
       const existing = await UserModel.findByEmail(nextEmail);
       if (existing && existing.id !== req.user.id) {
         throw new AppError('Email already registered', 409);
       }
 
+      const passwordHash = nextPassword ? await bcrypt.hash(nextPassword, 12) : null;
+
       const user = await UserModel.updateProfile(req.user.id, {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
         phone: nextPhone,
+        passwordHash,
       });
 
       sendSuccess(res, { user }, 'Profile updated successfully');

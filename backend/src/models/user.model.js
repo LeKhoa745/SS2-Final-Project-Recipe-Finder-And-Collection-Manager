@@ -35,10 +35,10 @@ export const UserModel = {
     return this.findById(userId);
   },
 
-  async updateProfile(userId, { name, email, avatar, phone }) {
+  async updateProfile(userId, { name, email, avatar, phone, passwordHash }) {
     await pool.query(
-      'UPDATE users SET name = ?, email = ?, avatar = ?, phone = ? WHERE id = ?',
-      [name, email, avatar || null, phone || null, userId]
+      'UPDATE users SET name = ?, email = ?, avatar = ?, phone = ?, password_hash = COALESCE(?, password_hash) WHERE id = ?',
+      [name, email, avatar || null, phone || null, passwordHash || null, userId]
     );
     return this.findById(userId);
   },

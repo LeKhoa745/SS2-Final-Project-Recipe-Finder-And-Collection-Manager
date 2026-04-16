@@ -41,7 +41,7 @@ export default function Login() {
 
       alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name || email}!`);
       navigate("/");
-    } catch (err) {
+    } catch {
       setError("⚠️ Cannot reach the server. Please try again later.");
     } finally {
       setLoading(false);
