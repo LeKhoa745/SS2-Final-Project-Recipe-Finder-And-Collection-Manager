@@ -48,8 +48,11 @@ export default function Navbar() {
           <Link to="/search" className="transition-colors hover:text-orange-600">
             Recipes
           </Link>
-          <Link to="/wishlist" className="transition-colors hover:text-orange-600">
+          <Link to="/collection" className="transition-colors hover:text-orange-600">
             Collection
+          </Link>
+          <Link to="/wishlist" className="transition-colors hover:text-orange-600">
+            Saved Recipes
           </Link>
         </div>
 

@@ -3,7 +3,7 @@ import pool from '../config/db.js';
 export const UserModel = {
   async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, email, avatar, role, dietary_prefs, created_at FROM users WHERE id = ? AND is_active = 1',
+      'SELECT id, name, email, avatar, phone, role, dietary_prefs, created_at FROM users WHERE id = ? AND is_active = 1',
       [id]
     );
     return rows[0] || null;
@@ -19,10 +19,10 @@ export const UserModel = {
     return rows[0] || null;
   },
 
-  async create({ name, email, passwordHash = null, googleId = null, avatar = null }) {
+  async create({ name, email, passwordHash = null, googleId = null, avatar = null, phone = null }) {
     const [result] = await pool.query(
-      'INSERT INTO users (name, email, password_hash, google_id, avatar) VALUES (?, ?, ?, ?, ?)',
-      [name, email, passwordHash, googleId, avatar]
+      'INSERT INTO users (name, email, password_hash, google_id, avatar, phone) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, passwordHash, googleId, avatar, phone]
     );
     return this.findById(result.insertId);
   },
@@ -35,10 +35,10 @@ export const UserModel = {
     return this.findById(userId);
   },
 
-  async updateProfile(userId, { name, email, avatar }) {
+  async updateProfile(userId, { name, email, avatar, phone }) {
     await pool.query(
-      'UPDATE users SET name = ?, email = ?, avatar = ? WHERE id = ?',
-      [name, email, avatar || null, userId]
+      'UPDATE users SET name = ?, email = ?, avatar = ?, phone = ? WHERE id = ?',
+      [name, email, avatar || null, phone || null, userId]
     );
     return this.findById(userId);
   },
@@ -66,7 +66,7 @@ export const UserModel = {
   async findAll({ page = 1, limit = 20 } = {}) {
     const offset = (page - 1) * limit;
     const [rows]  = await pool.query(
-      'SELECT id, name, email, avatar, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      'SELECT id, name, email, avatar, phone, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
       [limit, offset]
     );
     const [[{ total }]] = await pool.query('SELECT COUNT(*) as total FROM users');

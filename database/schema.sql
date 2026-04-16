@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     email         VARCHAR(150)  NOT NULL UNIQUE,
     password_hash VARCHAR(255)  NULL,
     google_id     VARCHAR(100)  NULL UNIQUE,
-    avatar        VARCHAR(500)  NULL,
+    avatar        TEXT          NULL,
+    phone         VARCHAR(20)   NULL,
     role          ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     dietary_prefs JSON          NULL,
     is_active     TINYINT(1)    NOT NULL DEFAULT 1,
@@ -138,4 +139,45 @@ CREATE TABLE IF NOT EXISTS recipe_notes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY uq_user_recipe (user_id, recipe_id),
     INDEX idx_user_id (user_id)
+) ENGINE=InnoDB;
+
+-- ─── User-Created Recipes (Collection / Community) ──────────
+CREATE TABLE IF NOT EXISTS user_recipes (
+    id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id          INT UNSIGNED  NOT NULL,
+    title            VARCHAR(255)  NOT NULL,
+    description      TEXT          NULL,
+    image_url        VARCHAR(500)  NULL,
+    ingredients      JSON          NOT NULL,              -- [{name, amount, unit}]
+    instructions     JSON          NOT NULL,              -- ["Step 1…", "Step 2…"]
+    cuisine          VARCHAR(100)  NULL,
+    cook_time_minutes INT UNSIGNED NULL,
+    servings         INT UNSIGNED  NULL DEFAULT 2,
+    is_public        TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_public (is_public),
+    FULLTEXT INDEX ft_title_desc (title, description)
+) ENGINE=InnoDB;
+
+-- ─── Audit / Deleted Tables ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS deleted_wishlist_items (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT UNSIGNED  NOT NULL,
+    recipe_id     VARCHAR(50)   NOT NULL,
+    recipe_title  VARCHAR(255)  NOT NULL,
+    recipe_image  VARCHAR(500)  NULL,
+    deleted_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS deleted_user_recipes (
+    id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id            INT UNSIGNED  NOT NULL,
+    original_recipe_id INT UNSIGNED  NOT NULL,
+    title              VARCHAR(255)  NOT NULL,
+    deleted_at         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

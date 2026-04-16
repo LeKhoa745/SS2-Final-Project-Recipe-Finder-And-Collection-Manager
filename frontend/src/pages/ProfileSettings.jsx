@@ -1,43 +1,56 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/apiClient";
 import { getStoredUser, updateStoredUser } from "../utils/session";
 
 const topLinks = [
   { label: "Recipes", href: "/search" },
-  { label: "Collections", href: "/wishlist" },
+  { label: "Collection", href: "/collection" },
+  { label: "Saved Recipes", href: "/wishlist" },
   { label: "Settings", href: "/settings", active: true },
 ];
 
 const sideLinks = [
   { icon: "search", label: "Search Recipes", href: "/search" },
-  { icon: "menu_book", label: "My Collections", href: "/wishlist" },
+  { icon: "menu_book", label: "Collection", href: "/collection" },
   { icon: "bookmark", label: "Saved Recipes", href: "/wishlist" },
   { icon: "settings", label: "Profile Settings", href: "/settings", active: true },
 ];
 
+function getPhoneDigits(phone) {
+  if (!phone) return "";
+  return phone.startsWith("+84") ? phone.slice(3).replace(/\D/g, "").slice(0, 9) : phone.replace(/\D/g, "").slice(0, 9);
+}
+
+function getAvatarFallback(name = "Chef") {
+  return `https://ui-avatars.com/api/?background=fff1eb&color=954b00&name=${encodeURIComponent(name)}`;
+}
+
 export default function ProfileSettings() {
+  const fileInputRef = useRef(null);
   const [user, setUser] = useState(getStoredUser());
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     avatar: "",
-    phone: "+1 (555) 012-3456",
+    phoneDigits: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   useEffect(() => {
     const syncUser = () => {
       const storedUser = getStoredUser();
       setUser(storedUser);
-      setFormData((current) => ({
-        ...current,
+      setAvatarLoadFailed(false);
+      setFormData({
         fullName: storedUser?.name || "",
         email: storedUser?.email || "",
         avatar: storedUser?.avatar || "",
-      }));
+        phoneDigits: getPhoneDigits(storedUser?.phone),
+      });
     };
 
     syncUser();
@@ -50,11 +63,53 @@ export default function ProfileSettings() {
     };
   }, []);
 
+  const avatarPreview = !avatarLoadFailed && formData.avatar
+    ? formData.avatar
+    : !avatarLoadFailed && user?.avatar
+      ? user.avatar
+      : getAvatarFallback(formData.fullName || user?.name || "Chef");
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setMessage("");
     setError("");
+
+    if (name === "phoneDigits") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 9);
+      setFormData((current) => ({ ...current, phoneDigits: digitsOnly }));
+      return;
+    }
+
+    if (name === "avatar") {
+      setAvatarLoadFailed(false);
+    }
+
     setFormData((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleAvatarFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file for your avatar.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarLoadFailed(false);
+      setError("");
+      setMessage("");
+      setFormData((current) => ({
+        ...current,
+        avatar: typeof reader.result === "string" ? reader.result : "",
+      }));
+    };
+    reader.onerror = () => {
+      setError("Unable to read the selected image.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (event) => {
@@ -70,11 +125,13 @@ export default function ProfileSettings() {
           name: formData.fullName.trim(),
           email: formData.email.trim(),
           avatar: formData.avatar.trim(),
+          phone: formData.phoneDigits ? `+84${formData.phoneDigits}` : null,
         }),
       });
 
       setUser(response.data.user);
       updateStoredUser(response.data.user);
+      setAvatarLoadFailed(false);
       setMessage("Profile updated successfully.");
     } catch (apiError) {
       setError(apiError.message || "Unable to update profile right now.");
@@ -84,18 +141,16 @@ export default function ProfileSettings() {
   };
 
   const handleCancel = () => {
-    setFormData((current) => ({
-      ...current,
+    setAvatarLoadFailed(false);
+    setFormData({
       fullName: user?.name || "",
       email: user?.email || "",
       avatar: user?.avatar || "",
-    }));
+      phoneDigits: getPhoneDigits(user?.phone),
+    });
     setMessage("");
     setError("");
   };
-
-  const avatarPreview =
-    formData.avatar || user?.avatar || "https://ui-avatars.com/api/?background=fff1eb&color=954b00&name=Chef";
 
   return (
     <div className="min-h-screen bg-[#fff9ec] font-body text-[#37331e]">
@@ -124,6 +179,7 @@ export default function ProfileSettings() {
           <img
             src={avatarPreview}
             alt="User chef profile"
+            onError={() => setAvatarLoadFailed(true)}
             className="h-10 w-10 rounded-full border-2 border-[#ffaf75] object-cover"
           />
         </div>
@@ -132,7 +188,12 @@ export default function ProfileSettings() {
       <aside className="fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-stone-200/50 bg-stone-50 pb-8 pt-24 shadow-xl">
         <div className="mb-8 px-8">
           <div className="mb-2 flex items-center gap-3">
-            <img src={avatarPreview} alt="Executive chef avatar" className="h-12 w-12 rounded-xl object-cover" />
+            <img
+              src={avatarPreview}
+              alt="Executive chef avatar"
+              onError={() => setAvatarLoadFailed(true)}
+              className="h-12 w-12 rounded-xl object-cover"
+            />
             <div>
               <h3 className="font-headline text-sm font-black uppercase tracking-widest text-stone-900">
                 Chef de Cuisine
@@ -200,15 +261,29 @@ export default function ProfileSettings() {
             <div className="top-32 flex flex-col items-center rounded-xl bg-[#fbf3dd] p-8 text-center lg:sticky">
               <div className="relative mb-6">
                 <div className="h-48 w-48 overflow-hidden rounded-full border-8 border-[#ebe2c4] shadow-xl">
-                  <img src={avatarPreview} alt="Chef avatar" className="h-full w-full object-cover" />
+                  <img
+                    src={avatarPreview}
+                    alt="Chef avatar"
+                    onError={() => setAvatarLoadFailed(true)}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <button
                   type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-2 right-2 rounded-full bg-[#954b00] p-3 text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
                 >
                   <span className="material-symbols-outlined text-xl">edit</span>
                 </button>
               </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+              />
 
               <h2 className="mb-1 font-headline text-2xl font-bold text-[#37331e]">
                 {formData.fullName || "Your name"}
@@ -219,13 +294,14 @@ export default function ProfileSettings() {
 
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="rounded-full border-2 border-[#b9b296]/60 px-8 py-3 font-headline font-bold text-[#954b00] transition-all hover:bg-[#ebe2c4]/60"
               >
                 Edit Photo
               </button>
 
               <p className="mt-8 text-xs leading-relaxed text-[#655f47]">
-                Paste an avatar image URL below.
+                Upload an image or paste an avatar URL below.
                 <br />
                 Changes save to your account.
               </p>
@@ -281,7 +357,7 @@ export default function ProfileSettings() {
                   <input
                     id="avatar"
                     name="avatar"
-                    type="url"
+                    type="text"
                     value={formData.avatar}
                     onChange={handleChange}
                     placeholder="https://example.com/avatar.jpg"
@@ -291,20 +367,28 @@ export default function ProfileSettings() {
 
                 <div>
                   <label
-                    htmlFor="phone"
+                    htmlFor="phoneDigits"
                     className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
                   >
                     Phone Number
                   </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+1 (234) 567-8900"
-                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                  />
+                  <div className="flex items-center overflow-hidden rounded-xl bg-[#f6eed5]">
+                    <span className="px-4 font-headline font-bold text-[#954b00]">+84</span>
+                    <input
+                      id="phoneDigits"
+                      name="phoneDigits"
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={9}
+                      value={formData.phoneDigits}
+                      onChange={handleChange}
+                      placeholder="912345678"
+                      className="w-full bg-transparent p-4 font-body text-[#37331e] outline-none"
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-[#655f47]">
+                    Enter 9 digits after +84.
+                  </p>
                 </div>
 
                 {message && (
@@ -322,7 +406,7 @@ export default function ProfileSettings() {
                 <div className="flex flex-wrap items-center gap-4 pt-10">
                   <button
                     type="submit"
-                    disabled={saving}
+                    disabled={saving || formData.phoneDigits.length !== 9}
                     className="rounded-full px-10 py-4 font-headline font-extrabold uppercase tracking-widest text-white transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
                     style={{ background: "linear-gradient(135deg, #954b00 0%, #ffaf75 100%)" }}
                   >

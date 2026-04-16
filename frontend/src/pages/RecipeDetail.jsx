@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { recipeService } from "../api/recipeService";
+import { collectionService } from "../api/collectionService";
 import { wishlistService } from "../api/wishlistService";
 import RecipeCard from "../components/RecipeCard";
 
@@ -16,32 +17,46 @@ export default function RecipeDetail() {
   const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [expandedIngredientId, setExpandedIngredientId] = useState(null);
 
+  // Determine if this is a community recipe
+  const isCommunity = id?.startsWith("community-");
+  const communityId = isCommunity ? id.replace("community-", "") : null;
+
   useEffect(() => {
     const fetchRecipeData = async () => {
       setLoading(true);
       setError(null);
       window.scrollTo(0, 0);
       try {
-        const recipeRes = await recipeService.getById(id);
-        if (recipeRes.data && recipeRes.data.recipe) {
-          setRecipe(recipeRes.data.recipe);
+        if (isCommunity) {
+          // Fetch from collection API
+          const res = await collectionService.getById(communityId);
+          if (res.data && res.data.recipe) {
+            setRecipe({ ...res.data.recipe, _community: true });
+          } else {
+            setError("Recipe not found.");
+          }
         } else {
-          setError("Recipe not found.");
-        }
+          // Fetch from Spoonacular
+          const recipeRes = await recipeService.getById(id);
+          if (recipeRes.data && recipeRes.data.recipe) {
+            setRecipe(recipeRes.data.recipe);
+          } else {
+            setError("Recipe not found.");
+          }
 
-        const similarRes = await recipeService.getSimilar(id);
-        if (similarRes.data && similarRes.data.recipes) {
-          setSimilarRecipes(similarRes.data.recipes);
-        }
+          const similarRes = await recipeService.getSimilar(id);
+          if (similarRes.data && similarRes.data.recipes) {
+            setSimilarRecipes(similarRes.data.recipes);
+          }
 
-        // Check if wishlisted
-        try {
-          const wlData = await wishlistService.check(id);
-          setIsWishlisted(wlData.data.exists);
-        } catch (wlErr) {
-          // ignore if user not logged in
+          // Check if wishlisted
+          try {
+            const wlData = await wishlistService.check(id);
+            setIsWishlisted(wlData.data.saved);
+          } catch {
+            // ignore if user not logged in
+          }
         }
-
       } catch (err) {
         console.error("Failed to fetch recipe details:", err);
         setError("Failed to load recipe information.");
@@ -54,14 +69,14 @@ export default function RecipeDetail() {
   }, [id]);
 
   const handleWishlistClick = async () => {
-    if (!recipe) return;
+    if (!recipe || isCommunity) return;
     setWishlistLoading(true);
     try {
       if (isWishlisted) {
         await wishlistService.remove(id);
         setIsWishlisted(false);
       } else {
-        await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, image: recipe.image });
+        await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
         setIsWishlisted(true);
       }
     } catch (err) {
@@ -91,6 +106,118 @@ export default function RecipeDetail() {
     );
   }
 
+  /* ── Community recipe detail ────────────────────────────── */
+  if (recipe._community) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="max-w-5xl mx-auto px-6 py-10">
+          {/* Community badge */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="px-4 py-2 rounded-full bg-purple-100 text-purple-700 text-sm font-bold flex items-center gap-2">
+              <span>👨‍🍳</span> Community Recipe
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              {recipe.authorAvatar && (
+                <img src={recipe.authorAvatar} alt="" className="w-6 h-6 rounded-full object-cover" />
+              )}
+              <span className="font-semibold text-[#2d1b11]">{recipe.authorName}</span>
+            </div>
+          </div>
+
+          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2d1b11] mb-8 font-serif leading-tight">
+            {recipe.title}
+          </h1>
+
+          {/* Hero Image */}
+          <div className="w-full h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-sm mb-8 bg-gradient-to-br from-orange-100 to-amber-50">
+            {recipe.imageUrl ? (
+              <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-8xl">🍽️</div>
+            )}
+          </div>
+
+          {/* Meta info */}
+          <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 pb-8 mb-12 text-[#2d1b11] font-medium text-sm">
+            {recipe.cookTimeMinutes && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⏱️</span>
+                <span>Total {recipe.cookTimeMinutes} minutes</span>
+              </div>
+            )}
+            {recipe.servings && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👥</span>
+                <span>Servings: {recipe.servings} people</span>
+              </div>
+            )}
+            {recipe.cuisine && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🌍</span>
+                <span>{recipe.cuisine}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          {recipe.description && (
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-[#ee5b66] mb-4">About This Recipe</h2>
+              <p className="text-[#2d1b11] leading-relaxed text-lg">{recipe.description}</p>
+            </div>
+          )}
+
+          {/* Ingredients */}
+          {recipe.ingredients && recipe.ingredients.length > 0 && (
+            <div className="mb-14">
+              <h2 className="text-3xl font-bold text-[#ee5b66] mb-8">Ingredients</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recipe.ingredients.map((ing, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-[#fff8f5] p-4 rounded-2xl border border-orange-50">
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#2d1b11] capitalize text-sm">{ing.name}</h4>
+                      {(ing.amount || ing.unit) && (
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">{ing.amount} {ing.unit}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Instructions */}
+          {recipe.instructions && recipe.instructions.length > 0 && (
+            <div className="mb-14">
+              <h2 className="text-3xl font-bold text-[#ee5b66] mb-8">Instructions</h2>
+              <div className="bg-[#fff8f5] rounded-3xl p-8 md:p-10 border border-orange-50">
+                {recipe.instructions.map((step, idx) => (
+                  <div key={idx} className="flex gap-6 mb-8 last:mb-0">
+                    <div className="w-8 h-8 rounded-full bg-[#521721] text-white flex items-center justify-center font-bold flex-shrink-0 mt-1 shadow-sm">
+                      {idx + 1}
+                    </div>
+                    <p className="text-[#2d1b11] leading-relaxed font-medium">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Back button */}
+          <div className="flex justify-center mt-10">
+            <button onClick={() => navigate(-1)} className="bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition-colors">
+              ← Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Spoonacular recipe detail (original) ───────────────── */
   // Calculate mock total cost based on ingredient count for demonstration
   const totalCost = recipe.extendedIngredients ? (recipe.extendedIngredients.length * 1.25).toFixed(2) : 0;
   

@@ -9,6 +9,7 @@ import './config/passport.js';
 import authRoutes    from './routes/auth.routes.js';
 import recipeRoutes  from './routes/recipe.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
+import collectionRoutes from './routes/collection.routes.js';
 import { plannerRouter, shoppingRouter, newsRouter, adminRouter } from './routes/index.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
@@ -43,6 +44,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date()
 app.use('/api/auth',     authRoutes);
 app.use('/api/recipes',  recipeRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/collection', collectionRoutes);
 app.use('/api/planner',  plannerRouter);
 app.use('/api/shopping', shoppingRouter);
 app.use('/api/news',     newsRouter);
