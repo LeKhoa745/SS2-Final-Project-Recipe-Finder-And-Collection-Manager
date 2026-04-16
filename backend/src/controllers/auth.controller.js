@@ -144,4 +144,18 @@ export const AuthController = {
       res.redirect(`${process.env.CLIENT_URL}/oauth/callback?token=${accessToken}`);
     } catch (err) { next(err); }
   },
+
+  async forgotPassword(req, res, next) {
+    try {
+      await AuthService.forgotPassword(req.body.email);
+      sendSuccess(res, null, 'If your email is registered, you will receive a reset link.');
+    } catch (err) { next(err); }
+  },
+
+  async resetPassword(req, res, next) {
+    try {
+      await AuthService.resetPassword(req.body.token, req.body.password);
+      sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
+    } catch (err) { next(err); }
+  },
 };

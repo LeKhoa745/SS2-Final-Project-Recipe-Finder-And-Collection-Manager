@@ -62,6 +62,22 @@ router.patch('/me',      protect, updateProfileRules, handleValidationErrors, Au
 router.post('/avatar',   protect, uploadAvatarMiddleware, AuthController.uploadAvatar);
 router.patch('/password', protect, updatePasswordRules, handleValidationErrors, AuthController.updatePassword);
 
+// Password Reset (Public)
+router.post('/forgot-password', 
+  [body('email').isEmail().normalizeEmail().withMessage('Valid email required')],
+  handleValidationErrors,
+  AuthController.forgotPassword
+);
+
+router.post('/reset-password',
+  [
+    body('token').notEmpty().withMessage('Token is required'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+  ],
+  handleValidationErrors,
+  AuthController.resetPassword
+);
+
 // Google OAuth2
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/google/callback',
