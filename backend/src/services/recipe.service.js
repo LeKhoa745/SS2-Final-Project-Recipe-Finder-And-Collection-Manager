@@ -1,6 +1,7 @@
 import { spoonacularClient, cachedGet } from '../utils/apiClient.js';
 import { MOCK_SEARCH_RESULTS, MOCK_RECIPE_DETAILS, MOCK_SIMILAR_RECIPES } from '../utils/mockData.js';
 import { logger } from '../utils/logger.js';
+import { UserRecipeModel } from '../models/userRecipe.model.js';
 
 const SEARCH_TTL = parseInt(process.env.CACHE_RECIPE_SEARCH_TTL) || 600;
 const DETAIL_TTL = parseInt(process.env.CACHE_RECIPE_DETAIL_TTL) || 3600;
@@ -9,6 +10,26 @@ const isMockEnabled = () => process.env.USE_MOCK_DATA === 'true';
 
 export const RecipeService = {
   async search({ query, ingredients, cuisine, diet, type, page = 1, limit = 12 }) {
+    // Fetch community recipes matching the query (non-blocking)
+    let communityResults = [];
+    try {
+      if (query) {
+        communityResults = await UserRecipeModel.searchPublicSimple(query, 6);
+        // Transform community recipes into a card-friendly shape
+        communityResults = communityResults.map(r => ({
+          id: `community-${r.id}`,
+          title: r.title,
+          image: r.imageUrl,
+          readyInMinutes: r.cookTimeMinutes,
+          servings: r.servings,
+          source: 'community',
+          authorName: r.authorName,
+        }));
+      }
+    } catch (communityErr) {
+      logger.warn('Community recipe search failed (non-fatal):', communityErr.message);
+    }
+
     try {
       if (isMockEnabled()) {
         logger.info('Using Mock Data for recipe search');
@@ -19,6 +40,7 @@ export const RecipeService = {
         }
         return {
           results: filteredResults,
+          communityResults,
           totalResults: filteredResults.length,
           page,
           limit,
@@ -42,6 +64,7 @@ export const RecipeService = {
 
       return {
         results:     data.results,
+        communityResults,
         totalResults: data.totalResults,
         page,
         limit,
@@ -57,6 +80,7 @@ export const RecipeService = {
         }
         return {
           results: filteredResults,
+          communityResults,
           totalResults: filteredResults.length,
           page,
           limit,

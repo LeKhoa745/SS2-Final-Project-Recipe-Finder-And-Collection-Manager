@@ -28,6 +28,10 @@ export const WishlistController = {
   // DELETE /api/wishlist/:recipeId
   async remove(req, res, next) {
     try {
+      if (req.params.recipeId === 'all') {
+        await WishlistModel.removeAll(req.user.id);
+        return sendSuccess(res, {}, 'Removed all from wishlist');
+      }
       const removed = await WishlistModel.remove(req.user.id, req.params.recipeId);
       if (!removed) throw new NotFoundError('Wishlist item');
       sendSuccess(res, {}, 'Removed from wishlist');
