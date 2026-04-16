@@ -79,7 +79,7 @@ export default function Signup() {
 
       alert(`✅ Account created successfully!\nWelcome, ${data.data.user.name}! You can now log in.`);
       navigate("/login");
-    } catch (err) {
+    } catch {
       // Network error – backend is probably not running
       setErrorMsg("⚠️ Cannot reach the server. Make sure the backend is running on port 5000.");
     } finally {
