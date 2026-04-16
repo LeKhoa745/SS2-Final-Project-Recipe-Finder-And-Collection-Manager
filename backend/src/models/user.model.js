@@ -3,7 +3,18 @@ import pool from '../config/db.js';
 export const UserModel = {
   async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, email, avatar, phone, role, dietary_prefs, created_at FROM users WHERE id = ? AND is_active = 1',
+      'SELECT id, name, email, avatar, phone, role, dietary_prefs, created_at, (password_hash IS NOT NULL) as hasPassword FROM users WHERE id = ? AND is_active = 1',
+      [id]
+    );
+    if (rows[0]) {
+      rows[0].hasPassword = !!rows[0].hasPassword;
+    }
+    return rows[0] || null;
+  },
+
+  async findByIdWithPassword(id) {
+    const [rows] = await pool.query(
+      'SELECT id, email, password_hash, is_active FROM users WHERE id = ? AND is_active = 1',
       [id]
     );
     return rows[0] || null;
@@ -41,6 +52,13 @@ export const UserModel = {
       [name, email, avatar || null, phone || null, userId]
     );
     return this.findById(userId);
+  },
+
+  async updatePassword(userId, passwordHash) {
+    await pool.query(
+      'UPDATE users SET password_hash = ? WHERE id = ?',
+      [passwordHash, userId]
+    );
   },
 
   async saveRefreshToken(userId, token, expiresAt) {

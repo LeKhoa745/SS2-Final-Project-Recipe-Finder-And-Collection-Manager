@@ -97,4 +97,16 @@ export const CollectionController = {
       sendSuccess(res, null, 'All recipes deleted');
     } catch (err) { next(err); }
   },
+
+  /**
+   * POST /api/collection/upload
+   * Upload a recipe image and return the path.
+   */
+  async uploadImage(req, res, next) {
+    try {
+      if (!req.file) throw new Error('No file uploaded');
+      const relativePath = `/uploads/recipes/${req.file.filename}`;
+      sendSuccess(res, { imageUrl: relativePath }, 'Image uploaded successfully');
+    } catch (err) { next(err); }
+  },
 };

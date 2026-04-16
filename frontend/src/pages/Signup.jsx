@@ -22,6 +22,8 @@ export default function Signup() {
   const [allValid,  setAllValid]  = useState(false);
   const [errorMsg,  setErrorMsg]  = useState("");
   const [loading,   setLoading]   = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
 
   const checkPassword = () => {
@@ -189,12 +191,21 @@ export default function Signup() {
                     <input
                       ref={passwordRef}
                       id="signup-password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       required
                       placeholder="••••••••"
                       onChange={checkPassword}
-                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
+                      className="w-full pl-12 pr-12 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {showPassword ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
@@ -210,12 +221,21 @@ export default function Signup() {
                     <input
                       ref={confirmRef}
                       id="signup-confirm"
-                      type="password"
+                      type={showConfirm ? "text" : "password"}
                       required
                       placeholder="••••••••"
                       onChange={checkPassword}
-                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
+                      className="w-full pl-12 pr-12 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {showConfirm ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
                   </div>
                 </div>
 

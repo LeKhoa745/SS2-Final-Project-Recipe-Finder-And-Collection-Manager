@@ -61,4 +61,14 @@ export const collectionService = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Upload a recipe image and return the path.
+   */
+  async uploadImage(formData) {
+    return apiClient('/collection/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

@@ -144,9 +144,11 @@ export const UserRecipeModel = {
     const params = [];
 
     if (query && query.trim()) {
-      where += ' AND MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE)';
+      where += ' AND (MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE) OR u.name LIKE ?)';
       // Append wildcard so partial words match
-      params.push(query.trim().split(/\s+/).map(w => `+${w}*`).join(' '));
+      const searchTerm = query.trim().split(/\s+/).map(w => `+${w}*`).join(' ');
+      const likeTerm = `%${query.trim()}%`;
+      params.push(searchTerm, likeTerm);
     }
 
     const [rows] = await pool.query(
@@ -160,10 +162,10 @@ export const UserRecipeModel = {
     );
 
     const countParams = query && query.trim()
-      ? [query.trim().split(/\s+/).map(w => `+${w}*`).join(' ')]
+      ? [query.trim().split(/\s+/).map(w => `+${w}*`).join(' '), `%${query.trim()}%`]
       : [];
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) as total FROM user_recipes r WHERE ${where}`,
+      `SELECT COUNT(*) as total FROM user_recipes r JOIN users u ON u.id = r.user_id WHERE ${where}`,
       countParams
     );
 
@@ -186,10 +188,10 @@ export const UserRecipeModel = {
       `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar
        FROM user_recipes r
        JOIN users u ON u.id = r.user_id
-       WHERE r.is_public = 1 AND (r.title LIKE ? OR r.description LIKE ?)
+       WHERE r.is_public = 1 AND (r.title LIKE ? OR r.description LIKE ? OR u.name LIKE ?)
        ORDER BY r.created_at DESC
        LIMIT ?`,
-      [like, like, limit]
+      [like, like, like, limit]
     );
     return rows.map(this._format);
   },

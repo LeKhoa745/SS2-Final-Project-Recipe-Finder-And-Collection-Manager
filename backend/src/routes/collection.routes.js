@@ -4,6 +4,7 @@ import { CollectionController } from '../controllers/collection.controller.js';
 import { protect, optionalAuth } from '../middleware/auth.middleware.js';
 import { handleValidationErrors } from '../middleware/error.middleware.js';
 import { apiLimiter } from '../middleware/rateLimit.middleware.js';
+import { uploadRecipeMiddleware } from '../middleware/upload.middleware.js';
 
 const router = Router();
 router.use(apiLimiter);
@@ -49,6 +50,12 @@ router.put('/:id',
 router.delete('/all',
   protect,
   CollectionController.deleteAll
+);
+
+router.post('/upload',
+  protect,
+  uploadRecipeMiddleware,
+  CollectionController.uploadImage
 );
 
 router.delete('/:id',

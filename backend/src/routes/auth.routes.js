@@ -5,6 +5,7 @@ import { AuthController } from '../controllers/auth.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authLimiter } from '../middleware/rateLimit.middleware.js';
 import { handleValidationErrors } from '../middleware/error.middleware.js';
+import { uploadAvatarMiddleware } from '../middleware/upload.middleware.js';
 
 const router = Router();
 
@@ -29,11 +30,9 @@ const updateProfileRules = [
       if (!value) return true;
       const isUrl = /^https?:\/\/.+/i.test(value);
       const isDataImage = /^data:image\/[a-zA-Z+]+;base64,/.test(value);
-      if (!isUrl && !isDataImage) {
-        throw new Error('Avatar must be an image URL or uploaded image data');
-      }
-      if (value.length > 200000) {
-        throw new Error('Avatar image is too large');
+      const isRelativePath = value.startsWith('/uploads/');
+      if (!isUrl && !isDataImage && !isRelativePath) {
+        throw new Error('Avatar must be an image URL, uploaded image data, or valid internal path');
       }
       return true;
     }),
@@ -41,6 +40,16 @@ const updateProfileRules = [
     .optional({ nullable: true })
     .matches(/^\+84\d{9}$/)
     .withMessage('Phone number must use +84 and contain exactly 9 digits after it'),
+  body('newPassword')
+    .optional({ checkFalsy: true })
+    .isLength({ min: 8 })
+    .withMessage('New password must be at least 8 characters'),
+  body('oldPassword').optional(),
+];
+
+const updatePasswordRules = [
+  body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
+  body('oldPassword').optional()
 ];
 
 // ── Routes ────────────────────────────────────────────────────
@@ -50,6 +59,8 @@ router.post('/refresh',  AuthController.refresh);
 router.post('/logout',   AuthController.logout);
 router.get('/me',        protect, AuthController.me);
 router.patch('/me',      protect, updateProfileRules, handleValidationErrors, AuthController.updateMe);
+router.post('/avatar',   protect, uploadAvatarMiddleware, AuthController.uploadAvatar);
+router.patch('/password', protect, updatePasswordRules, handleValidationErrors, AuthController.updatePassword);
 
 // Google OAuth2
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

@@ -13,6 +13,7 @@ import collectionRoutes from './routes/collection.routes.js';
 import { plannerRouter, shoppingRouter, newsRouter, adminRouter } from './routes/index.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
+import path from 'path';
 
 const app = express();
 
@@ -29,6 +30,8 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(passport.initialize());
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ── Logging ───────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {

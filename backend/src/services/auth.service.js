@@ -67,6 +67,20 @@ export const AuthService = {
     await UserModel.deleteRefreshToken(token);
   },
 
+  async updatePassword({ userId, oldPassword, newPassword }) {
+    const user = await UserModel.findByIdWithPassword(userId);
+    if (!user) throw new AppError('User not found', 404);
+
+    if (user.password_hash) {
+      if (!oldPassword) throw new AppError('Current password is required', 400);
+      const valid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!valid) throw new AppError('Incorrect current password', 400);
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await UserModel.updatePassword(userId, newHash);
+  },
+
   // Called after Google OAuth callback
   async handleOAuthLogin(user) {
     return generateTokens(user);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collectionService } from "../api/collectionService";
 import { getAccessToken, getStoredUser } from "../utils/session";
@@ -415,6 +415,36 @@ function CreateRecipeForm({
   updateInstruction, addInstruction, removeInstruction,
   onSubmit, onCancel,
 }) {
+  const fileInputRef = useRef(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("recipeImage", file);
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const res = await collectionService.uploadImage(formData);
+      updateField("imageUrl", res.data.imageUrl);
+    } catch (err) {
+      setError("Failed to upload image.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       {/* ── Basic Info ─────────────── */}
@@ -449,26 +479,87 @@ function CreateRecipeForm({
             />
           </div>
 
-          {/* Image URL */}
+          {/* Image Upload / URL */}
           <div>
-            <label className="block text-sm font-bold text-[#2d1b11] mb-2">Image URL</label>
-            <input
-              type="url"
-              value={form.imageUrl}
-              onChange={(e) => updateField("imageUrl", e.target.value)}
-              placeholder="https://example.com/my-recipe-photo.jpg"
-              className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-[#2d1b11] font-medium placeholder-gray-400"
-            />
-            {form.imageUrl && (
-              <div className="mt-3 h-40 w-full rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
-                <img
-                  src={form.imageUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.style.display = 'none'; }}
+            <label className="block text-sm font-bold text-[#2d1b11] mb-2 font-headline uppercase tracking-widest">Recipe Picture</label>
+            
+            {!showUrlInput ? (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative group cursor-pointer border-2 border-dashed rounded-3xl transition-all duration-300 flex flex-col items-center justify-center p-8 text-center
+                  ${form.imageUrl 
+                    ? "border-orange-200 bg-orange-50/30" 
+                    : "border-stone-200 bg-stone-50/50 hover:border-orange-400 hover:bg-orange-50/50"}`}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600 mb-2"></div>
+                    <p className="text-sm font-bold text-orange-600 uppercase tracking-widest">Uploading...</p>
+                  </div>
+                ) : form.imageUrl ? (
+                  <div className="w-full">
+                    <div className="relative h-48 w-full rounded-2xl overflow-hidden shadow-inner bg-white mb-3">
+                      <img
+                        src={form.imageUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 text-4xl">edit</span>
+                      </div>
+                    </div>
+                    <p className="text-xs font-bold text-orange-600 uppercase tracking-widest">Click to change picture</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-3xl">add_a_photo</span>
+                    </div>
+                    <h4 className="text-sm font-bold text-[#2d1b11] mb-1">Upload a delicious photo</h4>
+                    <p className="text-xs text-stone-500 uppercase tracking-widest">JPG, PNG up to 5MB</p>
+                  </>
+                )}
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
               </div>
+            ) : (
+              <div className="space-y-3 animation-slide-down">
+                <input
+                  type="url"
+                  value={form.imageUrl}
+                  onChange={(e) => updateField("imageUrl", e.target.value)}
+                  placeholder="https://example.com/my-recipe-photo.jpg"
+                  className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-[#2d1b11] font-medium placeholder-gray-400"
+                />
+                {form.imageUrl && (
+                  <div className="h-40 w-full rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.src = "https://placehold.co/600x400?text=Invalid+URL"; }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
+
+            <div className="mt-4 flex justify-between items-center px-1">
+              <p className="text-xs text-red-500 font-bold">{error}</p>
+              <button
+                type="button"
+                onClick={() => setShowUrlInput(!showUrlInput)}
+                className="text-xs font-bold uppercase tracking-widest text-orange-600 hover:text-orange-700 underline underline-offset-4"
+              >
+                {showUrlInput ? "Back to upload" : "Use image link instead"}
+              </button>
+            </div>
           </div>
 
           {/* Meta row */}
