@@ -11,11 +11,14 @@ import OAuthCallback from "./pages/OAuthCallback";
 import ProfileSettings from "./pages/ProfileSettings";
 
 import RecipeDetail from "./pages/RecipeDetail";
+import Collection from "./pages/Collection";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
   const location = useLocation();
-  const chromeLessPaths = ["/login", "/signup", "/settings"];
+  const chromeLessPaths = ["/login", "/signup", "/settings", "/forgot-password", "/reset-password"];
   const hideNav = chromeLessPaths.includes(location.pathname);
 
   return (
@@ -29,9 +32,12 @@ function AppLayout() {
         <Route path="/settings" element={<ProfileSettings />} />
 
         <Route path="/recipe/:id" element={<RecipeDetail />} />
+        <Route path="/collection" element={<Collection />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
       </Routes>
     </>

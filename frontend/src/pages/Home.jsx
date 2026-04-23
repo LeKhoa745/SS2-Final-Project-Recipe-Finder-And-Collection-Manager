@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import RecipeCard from "../components/RecipeCard";
 import { newsService } from "../api/newsService";
+import { recipeService } from "../api/recipeService";
 import { getStoredUser } from "../utils/session";
 
 function getAvatarFallback(name = "User") {
@@ -21,6 +22,8 @@ export default function Home() {
   const profileMenuRef = useRef(null);
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(true);
+  const [recipes, setRecipes] = useState([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [user, setUser] = useState(getStoredUser());
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -37,6 +40,21 @@ export default function Home() {
     };
 
     fetchNews();
+  }, []);
+
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const data = await recipeService.search({ limit: 24 });
+        setRecipes(data.data.results || []);
+      } catch (err) {
+        console.error("Failed to fetch recipes:", err);
+      } finally {
+        setLoadingRecipes(false);
+      }
+    };
+
+    fetchRecipes();
   }, []);
 
   useEffect(() => {
@@ -59,7 +77,8 @@ export default function Home() {
   }, []);
 
   const handleSearch = (query) => {
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    const trimmedQuery = query.trim();
+    navigate(trimmedQuery ? `/search?q=${encodeURIComponent(trimmedQuery)}` : "/search");
   };
 
   const handleWishlist = (title) => {
@@ -177,34 +196,25 @@ export default function Home() {
         </div>
 
         <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-3xl font-bold text-[#2d1b11]">
-          Featured Recipes
+          Browse Recipes
         </h2>
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <RecipeCard
-            id="716429"
-            title="Pasta with Garlic and Oil"
-            image="https://spoonacular.com/recipeImages/716429-556x370.jpg"
-            onWishlist={() => handleWishlist("Pasta with Garlic and Oil")}
-          />
-          <RecipeCard
-            id="715538"
-            title="What to Expect When You're Expecting"
-            image="https://spoonacular.com/recipeImages/715538-556x370.jpg"
-            onWishlist={() => handleWishlist("Pork Chops")}
-          />
-          <RecipeCard
-            id="782585"
-            title="Cannellini Bean and Kale Soup"
-            image="https://spoonacular.com/recipeImages/782585-556x370.jpg"
-            onWishlist={() => handleWishlist("Bean Soup")}
-          />
-          <RecipeCard
-            id="715415"
-            title="Red Lentil Soup with Chicken and Spinach"
-            image="https://spoonacular.com/recipeImages/715415-556x370.jpg"
-            onWishlist={() => handleWishlist("Red Lentil Soup")}
-          />
-        </div>
+        {loadingRecipes ? (
+          <p className="italic text-gray-500">Loading recipes for you...</p>
+        ) : recipes.length > 0 ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {recipes.map((recipe) => (
+              <RecipeCard
+                key={recipe.id}
+                id={recipe.id}
+                title={recipe.title}
+                image={recipe.image}
+                onWishlist={() => handleWishlist(recipe.title)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400">No recipes available right now.</p>
+        )}
       </div>
     </div>
   );

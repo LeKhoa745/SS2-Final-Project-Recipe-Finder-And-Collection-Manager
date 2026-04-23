@@ -5,6 +5,7 @@ import { AuthController } from '../controllers/auth.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authLimiter } from '../middleware/rateLimit.middleware.js';
 import { handleValidationErrors } from '../middleware/error.middleware.js';
+import { uploadAvatarMiddleware } from '../middleware/upload.middleware.js';
 
 const router = Router();
 
@@ -27,9 +28,10 @@ const updateProfileRules = [
     .optional({ nullable: true })
     .custom((value) => {
       if (!value) return true;
-      const isDataImage = /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value);
-      if (!isDataImage) {
-        throw new Error('Avatar must be a JPG, PNG, or WebP image');
+      const isUrl = /^https?:\/\/.+/i.test(value);
+      const isDataImage = /^data:image\/[a-zA-Z+]+;base64,/.test(value);
+      if (!isUrl && !isDataImage) {
+        throw new Error('Avatar must be an image URL or uploaded image data');
       }
       if (value.length > 200000) {
         throw new Error('Avatar image is too large');
@@ -44,6 +46,16 @@ const updateProfileRules = [
     .optional({ nullable: true })
     .matches(/^\+84\d{9}$/)
     .withMessage('Phone number must use +84 and contain exactly 9 digits after it'),
+  body('newPassword')
+    .optional({ checkFalsy: true })
+    .isLength({ min: 8 })
+    .withMessage('New password must be at least 8 characters'),
+  body('oldPassword').optional(),
+];
+
+const updatePasswordRules = [
+  body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
+  body('oldPassword').optional()
 ];
 
 // ── Routes ────────────────────────────────────────────────────
@@ -53,6 +65,40 @@ router.post('/refresh',  AuthController.refresh);
 router.post('/logout',   AuthController.logout);
 router.get('/me',        protect, AuthController.me);
 router.patch('/me',      protect, updateProfileRules, handleValidationErrors, AuthController.updateMe);
+router.post('/avatar',   protect, uploadAvatarMiddleware, AuthController.uploadAvatar);
+router.patch('/password', protect, updatePasswordRules, handleValidationErrors, AuthController.updatePassword);
+
+// Password Reset (Public)
+router.post('/forgot-password', 
+  [body('email').isEmail().normalizeEmail().withMessage('Valid email required')],
+  handleValidationErrors,
+  AuthController.forgotPassword
+);
+
+router.post('/verify-reset-phone',
+  [
+    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('phone')
+      .trim()
+      .matches(/^\+84\d{9}$/)
+      .withMessage('Phone number must use +84 and contain exactly 9 digits after it')
+  ],
+  handleValidationErrors,
+  AuthController.verifyResetPhone
+);
+
+router.post('/reset-password',
+  [
+    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('phone')
+      .trim()
+      .matches(/^\+84\d{9}$/)
+      .withMessage('Phone number must use +84 and contain exactly 9 digits after it'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+  ],
+  handleValidationErrors,
+  AuthController.resetPassword
+);
 
 // Google OAuth2
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));

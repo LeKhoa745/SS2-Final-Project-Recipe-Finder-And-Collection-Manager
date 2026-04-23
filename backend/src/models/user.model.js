@@ -3,7 +3,18 @@ import pool from '../config/db.js';
 export const UserModel = {
   async findById(id) {
     const [rows] = await pool.query(
-      'SELECT id, name, email, avatar, phone, role, dietary_prefs, created_at FROM users WHERE id = ? AND is_active = 1',
+      'SELECT id, name, email, avatar, phone, role, dietary_prefs, created_at, (password_hash IS NOT NULL) as hasPassword FROM users WHERE id = ? AND is_active = 1',
+      [id]
+    );
+    if (rows[0]) {
+      rows[0].hasPassword = !!rows[0].hasPassword;
+    }
+    return rows[0] || null;
+  },
+
+  async findByIdWithPassword(id) {
+    const [rows] = await pool.query(
+      'SELECT id, email, password_hash, is_active FROM users WHERE id = ? AND is_active = 1',
       [id]
     );
     return rows[0] || null;
@@ -43,6 +54,13 @@ export const UserModel = {
     return this.findById(userId);
   },
 
+  async updatePassword(userId, passwordHash) {
+    await pool.query(
+      'UPDATE users SET password_hash = ? WHERE id = ?',
+      [passwordHash, userId]
+    );
+  },
+
   async saveRefreshToken(userId, token, expiresAt) {
     await pool.query(
       'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
@@ -79,5 +97,29 @@ export const UserModel = {
 
   async toggleActive(userId, isActive) {
     await pool.query('UPDATE users SET is_active = ? WHERE id = ?', [isActive, userId]);
+  },
+
+  // Password Resets
+  async saveResetToken(userId, token, expiresAt) {
+    await pool.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+      [userId, token, expiresAt]
+    );
+  },
+
+  async deleteResetTokensByUser(userId) {
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
+  },
+
+  async findResetToken(token) {
+    const [rows] = await pool.query(
+      'SELECT pt.*, u.email FROM password_reset_tokens pt JOIN users u ON u.id = pt.user_id WHERE pt.token = ? AND pt.expires_at > NOW()',
+      [token]
+    );
+    return rows[0] || null;
+  },
+
+  async deleteResetToken(token) {
+    await pool.query('DELETE FROM password_reset_tokens WHERE token = ?', [token]);
   },
 };

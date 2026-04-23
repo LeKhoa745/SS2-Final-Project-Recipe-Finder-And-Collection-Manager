@@ -1,6 +1,6 @@
 import { spoonacularClient, cachedGet } from '../utils/apiClient.js';
-import { MockRecipeService } from './mockRecipe.service.js';
-import { isRecipeApiFallbackError, logRecipeFallback, shouldForceMockRecipes } from '../utils/recipeSource.js';
+import { MOCK_SEARCH_RESULTS, MOCK_RECIPE_DETAILS, MOCK_SIMILAR_RECIPES } from '../utils/mockData.js';
+import { logger } from '../utils/logger.js';
 
 const SEARCH_TTL = parseInt(process.env.CACHE_RECIPE_SEARCH_TTL, 10) || 600;
 const DETAIL_TTL = parseInt(process.env.CACHE_RECIPE_DETAIL_TTL, 10) || 3600;
@@ -21,30 +21,62 @@ function buildSearchParams({ query, ingredients, cuisine, diet, type, page, limi
 
 export const RecipeService = {
   async search({ query, ingredients, cuisine, diet, type, page = 1, limit = 12 }) {
-    if (shouldForceMockRecipes()) {
-      return MockRecipeService.search({ query, ingredients, cuisine, diet, type, page, limit });
-    }
-
     try {
-      const data = await cachedGet(
-        spoonacularClient,
-        '/recipes/complexSearch',
-        buildSearchParams({ query, ingredients, cuisine, diet, type, page, limit }),
-        SEARCH_TTL
-      );
+      if (isMockEnabled()) {
+        logger.info('Using Mock Data for recipe search');
+        let filteredResults = MOCK_SEARCH_RESULTS;
+        if (query) {
+          const q = query.toLowerCase();
+          filteredResults = MOCK_SEARCH_RESULTS.filter(r => r.title.toLowerCase().includes(q));
+        }
+        return {
+          results: filteredResults,
+          totalResults: filteredResults.length,
+          page,
+          limit,
+          totalPages: 1,
+        };
+      }
+
+      const params = {
+        number: limit,
+        offset: (page - 1) * limit,
+        addRecipeInformation: true,
+        fillIngredients: false,
+        ...(query       && { query }),
+        ...(ingredients && { includeIngredients: ingredients }),
+        ...(cuisine     && { cuisine }),
+        ...(diet        && { diet }),
+        ...(type        && { type }),
+      };
+
+      const data = await cachedGet(spoonacularClient, '/recipes/complexSearch', params, SEARCH_TTL);
 
       return {
-        results: data.results || [],
-        totalResults: data.totalResults || 0,
+        results:     data.results,
+        totalResults: data.totalResults,
         page,
         limit,
         totalPages: Math.max(1, Math.ceil((data.totalResults || 0) / limit)),
         source: 'live',
       };
-    } catch (error) {
-      if (!isRecipeApiFallbackError(error)) throw error;
-      logRecipeFallback(error, 'search');
-      return MockRecipeService.search({ query, ingredients, cuisine, diet, type, page, limit });
+    } catch (err) {
+      if (err.response?.status === 402) {
+        logger.warn('Spoonacular API limit reached (402). Falling back to Mock Data.');
+        let filteredResults = MOCK_SEARCH_RESULTS;
+        if (query) {
+          const q = query.toLowerCase();
+          filteredResults = MOCK_SEARCH_RESULTS.filter(r => r.title.toLowerCase().includes(q));
+        }
+        return {
+          results: filteredResults,
+          totalResults: filteredResults.length,
+          page,
+          limit,
+          totalPages: 1,
+        };
+      }
+      throw err;
     }
   },
 
