@@ -1,10 +1,8 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { UserModel } from '../models/user.model.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
 
-// ── Token helpers ──────────────────────────────────────────────
 export const generateTokens = async (user) => {
   const payload = { id: user.id, email: user.email, role: user.role };
 
@@ -16,14 +14,29 @@ export const generateTokens = async (user) => {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   });
 
-  // Persist refresh token
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   await UserModel.saveRefreshToken(user.id, refreshToken, expiresAt);
 
   return { accessToken, refreshToken };
 };
 
-// ── Auth Service ───────────────────────────────────────────────
+const getPasswordResetUser = async (email) => {
+  const user = await UserModel.findByEmail(email);
+  if (!user) throw new AppError('Invalid email, Try again!', 404);
+
+  if (!user.password_hash) {
+    throw new AppError('This account was created via Google. Please use Google Login.', 400);
+  }
+
+  if (!user.phone) {
+    throw new AppError('This account does not have a phone number on file.', 400);
+  }
+
+  return user;
+};
+
+const normalizePhone = (phone) => phone.trim();
+
 export const AuthService = {
   async register({ name, email, password }) {
     const existing = await UserModel.findByEmail(email);
@@ -46,8 +59,8 @@ export const AuthService = {
 
     if (!user.is_active) throw new AppError('Account disabled', 403);
 
-    const safeUser = await UserModel.findById(user.id); // strips password_hash
-    const tokens   = await generateTokens(safeUser);
+    const safeUser = await UserModel.findById(user.id);
+    const tokens = await generateTokens(safeUser);
     return { user: safeUser, ...tokens };
   },
 
@@ -58,7 +71,6 @@ export const AuthService = {
     const user = await UserModel.findById(stored.user_id);
     if (!user) throw new UnauthorizedError('User not found');
 
-    // Rotate: delete old, issue new
     await UserModel.deleteRefreshToken(token);
     const tokens = await generateTokens(user);
     return { user, ...tokens };
@@ -82,41 +94,35 @@ export const AuthService = {
     await UserModel.updatePassword(userId, newHash);
   },
 
-  // Called after Google OAuth callback
   async handleOAuthLogin(user) {
     return generateTokens(user);
   },
 
   async forgotPassword(email) {
-    const user = await UserModel.findByEmail(email);
-    if (!user) throw new AppError('No user found with this email address', 404);
+    const user = await getPasswordResetUser(email);
 
-    if (!user.password_hash) {
-      throw new AppError('This account was created via Google. Please use Google Login.', 400);
+    return {
+      phoneHint: user.phone,
+    };
+  },
+
+  async verifyResetPhone(email, phone) {
+    const user = await getPasswordResetUser(email);
+    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
+      throw new AppError('Phone number does not match our records.', 400);
     }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
-
-    await UserModel.saveResetToken(user.id, token, expiresAt);
-
-    // Simulate sending email by logging to console
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-    console.log('\n\n================================================');
-    console.log('🔗 PASSWORD RESET LINK:');
-    console.log(resetUrl);
-    console.log('================================================\n\n');
 
     return true;
   },
 
-  async resetPassword(token, newPassword) {
-    const resetRequest = await UserModel.findResetToken(token);
-    if (!resetRequest) throw new AppError('Invalid or expired reset token', 400);
+  async resetPassword(email, phone, newPassword) {
+    const user = await getPasswordResetUser(email);
+    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
+      throw new AppError('Phone number does not match our records.', 400);
+    }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await UserModel.updatePassword(resetRequest.user_id, passwordHash);
-    await UserModel.deleteResetToken(token);
+    await UserModel.updatePassword(user.id, passwordHash);
 
     return true;
   },

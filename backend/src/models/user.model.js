@@ -46,10 +46,10 @@ export const UserModel = {
     return this.findById(userId);
   },
 
-  async updateProfile(userId, { name, email, avatar, phone }) {
+  async updateProfile(userId, { name, email, avatar, phone, passwordHash }) {
     await pool.query(
-      'UPDATE users SET name = ?, email = ?, avatar = ?, phone = ? WHERE id = ?',
-      [name, email, avatar || null, phone || null, userId]
+      'UPDATE users SET name = ?, email = ?, avatar = ?, phone = ?, password_hash = COALESCE(?, password_hash) WHERE id = ?',
+      [name, email, avatar || null, phone || null, passwordHash || null, userId]
     );
     return this.findById(userId);
   },
@@ -105,6 +105,10 @@ export const UserModel = {
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
       [userId, token, expiresAt]
     );
+  },
+
+  async deleteResetTokensByUser(userId) {
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
   },
 
   async findResetToken(token) {

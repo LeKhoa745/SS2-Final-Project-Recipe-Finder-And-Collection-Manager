@@ -23,7 +23,14 @@ function getPhoneDigits(phone) {
 }
 
 function getAvatarFallback(name = "Chef") {
-  return `https://ui-avatars.com/api/?background=fff1eb&color=954b00&name=${encodeURIComponent(name)}`;
+  const initial = (name || "Chef").trim().charAt(0).toUpperCase() || "C";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="60" fill="#fff1eb" />
+      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#954b00">${initial}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default function ProfileSettings() {
@@ -34,6 +41,8 @@ export default function ProfileSettings() {
     email: "",
     avatar: "",
     phoneDigits: "",
+    newPassword: "",
+    confirmNewPassword: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -69,6 +78,8 @@ export default function ProfileSettings() {
         email: storedUser?.email || "",
         avatar: storedUser?.avatar || "",
         phoneDigits: getPhoneDigits(storedUser?.phone),
+        newPassword: "",
+        confirmNewPassword: "",
       });
     };
 
@@ -88,6 +99,9 @@ export default function ProfileSettings() {
       ? user.avatar
       : getAvatarFallback(formData.fullName || user?.name || "Chef");
 
+  const isPasswordChange = Boolean(formData.newPassword || formData.confirmNewPassword);
+  const passwordMismatch = isPasswordChange && formData.newPassword !== formData.confirmNewPassword;
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setMessage("");
@@ -99,10 +113,6 @@ export default function ProfileSettings() {
       return;
     }
 
-    if (name === "avatar") {
-      setAvatarLoadFailed(false);
-    }
-
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
@@ -110,8 +120,10 @@ export default function ProfileSettings() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file for your avatar.");
+    const acceptedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!acceptedTypes.includes(file.type)) {
+      setError("Please choose a JPG, PNG, or WebP image for your avatar.");
+      event.target.value = "";
       return;
     }
 
@@ -142,6 +154,13 @@ export default function ProfileSettings() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (passwordMismatch) {
+      setMessage("");
+      setError("😢 Passwords do not match.");
+      return;
+    }
+
     setSaving(true);
     setMessage("");
     setError("");
@@ -166,25 +185,24 @@ export default function ProfileSettings() {
     }
 
     try {
+      const nextPassword = formData.newPassword.trim();
       const response = await apiClient("/auth/me", {
         method: "PATCH",
         body: JSON.stringify({
           name: formData.fullName.trim(),
           email: formData.email.trim(),
-          avatar: formData.avatar.trim(),
+          avatar: formData.avatar,
           phone: formData.phoneDigits ? `+84${formData.phoneDigits}` : null,
-          oldPassword: passwordData.oldPassword || undefined,
-          newPassword: passwordData.newPassword || undefined,
         }),
       });
 
       setUser(response.data.user);
       updateStoredUser(response.data.user);
       setAvatarLoadFailed(false);
-      setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
-      setMessage("Profile and security settings updated successfully.");
+      setMessage("Profile updated successfully.");
     } catch (apiError) {
-      setError(apiError.message || "Unable to update profile right now.");
+      const validationMessage = apiError.data?.errors?.[0]?.message;
+      setError(validationMessage || apiError.message || "Unable to update profile right now.");
     } finally {
       setSaving(false);
     }
@@ -204,6 +222,8 @@ export default function ProfileSettings() {
       email: user?.email || "",
       avatar: user?.avatar || "",
       phoneDigits: getPhoneDigits(user?.phone),
+      newPassword: "",
+      confirmNewPassword: "",
     });
     setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
     setMessage("");
@@ -338,7 +358,7 @@ export default function ProfileSettings() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                 onChange={handleAvatarFileChange}
                 className="hidden"
               />
@@ -359,14 +379,7 @@ export default function ProfileSettings() {
               </button>
 
               <p className="mt-8 text-xs leading-relaxed text-[#655f47]">
-                Upload an image or{" "}
-                <button
-                  type="button"
-                  onClick={() => setShowAvatarUrl(!showAvatarUrl)}
-                  className="font-bold underline text-[#954b00]"
-                >
-                  {showAvatarUrl ? "hide link" : "use link"}
-                </button>
+                Upload an image or paste an avatar URL below.
                 <br />
                 Changes save to your account.
               </p>
@@ -436,113 +449,6 @@ export default function ProfileSettings() {
                   <p className="mt-2 text-sm text-[#655f47]">
                     Enter 9 digits after +84.
                   </p>
-                </div>
-
-                {showAvatarUrl && (
-                  <div>
-                    <label
-                      htmlFor="avatar"
-                      className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                    >
-                      Avatar URL
-                    </label>
-                    <input
-                      id="avatar"
-                      name="avatar"
-                      type="text"
-                      value={formData.avatar}
-                      onChange={handleChange}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                    />
-                  </div>
-                )}
-
-                <div className="pt-4 border-t border-stone-100">
-                  <h3 className="mb-6 font-headline text-lg font-bold text-[#37331e]">Security</h3>
-                  {!!user?.hasPassword && (
-                    <div className="mb-6">
-                      <label
-                        htmlFor="oldPassword"
-                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                      >
-                        Current Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="oldPassword"
-                          name="oldPassword"
-                          type={showOldPassword ? "text" : "password"}
-                          value={passwordData.oldPassword}
-                          onChange={handlePasswordChange}
-                          placeholder="Enter current password"
-                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowOldPassword(!showOldPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
-                        >
-                          <span className="material-symbols-outlined">{showOldPassword ? "visibility_off" : "visibility"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label
-                        htmlFor="newPassword"
-                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                      >
-                        New Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="newPassword"
-                          name="newPassword"
-                          type={showNewPassword ? "text" : "password"}
-                          value={passwordData.newPassword}
-                          onChange={handlePasswordChange}
-                          placeholder="Min 8 characters"
-                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
-                        >
-                          <span className="material-symbols-outlined">{showNewPassword ? "visibility_off" : "visibility"}</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="confirmPassword"
-                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                      >
-                        Confirm New Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={passwordData.confirmPassword}
-                          onChange={handlePasswordChange}
-                          placeholder="Repeat password"
-                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
-                        >
-                          <span className="material-symbols-outlined">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {message && (
