@@ -21,6 +21,32 @@ function buildSearchParams({ query, ingredients, cuisine, diet, type, page, limi
 
 export const RecipeService = {
   async search({ query, ingredients, cuisine, diet, type, page = 1, limit = 12 }) {
+    // Fetch community recipes matching the query (non-blocking)
+    let communityResults = [];
+    try {
+      // If query is empty, we search for 'random' or 'featured' ones by just getting public ones without filters
+      if (query) {
+        communityResults = await UserRecipeModel.searchPublicSimple(query, 6);
+      } else {
+        // Get some 'featured' community recipes
+        const res = await UserRecipeModel.searchPublic('', { page: 1, limit: 6 });
+        communityResults = res.recipes;
+      }
+
+      // Transform community recipes into a card-friendly shape
+      communityResults = communityResults.map(r => ({
+        id: `community-${r.id}`,
+        title: r.title,
+        image: r.imageUrl,
+        readyInMinutes: r.cookTimeMinutes,
+        servings: r.servings,
+        source: 'community',
+        authorName: r.authorName,
+      }));
+    } catch (communityErr) {
+      logger.warn('Community recipe search failed (non-fatal):', communityErr.message);
+    }
+
     try {
       if (isMockEnabled()) {
         logger.info('Using Mock Data for recipe search');

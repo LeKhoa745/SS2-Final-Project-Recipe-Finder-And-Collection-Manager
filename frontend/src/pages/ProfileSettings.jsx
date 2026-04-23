@@ -451,6 +451,120 @@ export default function ProfileSettings() {
                   </p>
                 </div>
 
+                {showAvatarUrl && (
+                  <div>
+                    <label
+                      htmlFor="avatar"
+                      className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                    >
+                      Avatar URL
+                    </label>
+                    <input
+                      id="avatar"
+                      name="avatar"
+                      type="text"
+                      value={formData.avatar}
+                      onChange={handleChange}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                    />
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-stone-100">
+                  <h3 className="mb-6 font-headline text-lg font-bold text-[#37331e]">Security</h3>
+                  {!!user?.hasPassword && (
+                    <div className="mb-6">
+                      <label
+                        htmlFor="oldPassword"
+                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                      >
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="oldPassword"
+                          name="oldPassword"
+                          type={showOldPassword ? "text" : "password"}
+                          value={passwordData.oldPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Enter current password"
+                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
+                        >
+                          <span className="material-symbols-outlined">{showOldPassword ? "visibility_off" : "visibility"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label
+                        htmlFor="newPassword"
+                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                      >
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="newPassword"
+                          name="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          value={passwordData.newPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Min 8 characters"
+                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
+                        >
+                          <span className="material-symbols-outlined">{showNewPassword ? "visibility_off" : "visibility"}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="confirmPassword"
+                        className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
+                      >
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={passwordData.confirmPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Repeat password"
+                          className="w-full rounded-xl bg-[#f6eed5] p-4 pr-12 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
+                        >
+                          <span className="material-symbols-outlined">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Link to="/forgot-password" size="sm" className="text-sm font-bold text-orange-600 hover:underline flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">lock_reset</span>
+                      Forgot password or want to reset via phone?
+                    </Link>
+                  </div>
+                </div>
+
+
                 {message && (
                   <p className="rounded-xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                     {message}

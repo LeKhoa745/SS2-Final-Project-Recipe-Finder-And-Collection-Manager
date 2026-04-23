@@ -34,6 +34,7 @@ export default function RecipeCard({ id, title, image, onWishlist, source, autho
       if (isWishlisted) {
         await wishlistService.remove(id);
         setIsWishlisted(false);
+        if (onUnsave) onUnsave();
       } else {
         await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
         setIsWishlisted(true);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import RecipeCard from "../components/RecipeCard";
 import { wishlistService } from "../api/wishlistService";
+import { getAccessToken } from "../utils/session";
 
 export default function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -26,7 +27,12 @@ export default function Wishlist() {
         setLoading(false);
       }
     };
-    fetchWishlist();
+
+    if (getAccessToken()) {
+      fetchWishlist();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const handleUnsaveAll = async () => {
@@ -38,6 +44,10 @@ export default function Wishlist() {
       console.error("Failed to remove all items:", err);
       alert("Something went wrong while removing all recipes.");
     }
+  };
+
+  const handleItemUnsave = (recipeId) => {
+    setWishlistItems(prev => prev.filter(item => item.id !== recipeId));
   };
 
   return (
@@ -65,12 +75,17 @@ export default function Wishlist() {
           <div className="text-center py-20">
             <p className="text-orange-600 text-xl font-medium animate-pulse">Loading your saved recipes... 🍳</p>
           </div>
-        ) : error ? (
+        ) : error && !getAccessToken() ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-orange-50">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
             <a href="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</a>
           </div>
+        ) : error ? (
+           <div className="text-center py-20">
+             <h2 className="text-xl font-bold text-red-500 mb-4">{error}</h2>
+             <button onClick={() => window.location.reload()} className="bg-orange-600 text-white px-6 py-2 rounded-xl font-bold">Try Again</button>
+           </div>
         ) : wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {wishlistItems.map((item) => (
@@ -78,7 +93,8 @@ export default function Wishlist() {
                 key={item.id} 
                 id={item.id} 
                 title={item.title} 
-                image={item.image} 
+                image={item.image}
+                onUnsave={() => handleItemUnsave(item.id)}
               />
             ))}
           </div>

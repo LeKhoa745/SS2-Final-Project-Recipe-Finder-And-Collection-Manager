@@ -22,6 +22,13 @@ export default function Home() {
   const profileMenuRef = useRef(null);
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  });
   const [recipes, setRecipes] = useState([]);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [user, setUser] = useState(getStoredUser());

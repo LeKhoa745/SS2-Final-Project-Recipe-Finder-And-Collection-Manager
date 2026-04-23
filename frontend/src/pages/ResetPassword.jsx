@@ -3,6 +3,57 @@ import { Link, useSearchParams } from "react-router-dom";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const navigate = useNavigate();
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+
+    if (!token) {
+      setError("No reset token found in the URL.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reset password.");
+
+      setMessage("Success! Your password has been updated.");
+      setTimeout(() => navigate("/login"), 3000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   const legacyToken = searchParams.get("token");
 
   return (
@@ -45,6 +96,43 @@ export default function ResetPassword() {
                 </div>
               )}
 
+                <div className="space-y-2">
+                  <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant">
+                    🔄 Confirm Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-white/70 border border-stone-200 rounded-2xl px-5 py-4 pr-12 focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-stone-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined">
+                        {showConfirmPassword ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {message && (
+                  <div className="p-4 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-sm font-bold animate-bounce">
+                    {message}
+                    <p className="text-xs font-normal mt-1">Redirecting to login...</p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm font-medium">
+                    {error}
+                  </div>
+                )}
               <div className="rounded-2xl border border-white/30 bg-white/70 px-5 py-5 text-sm text-stone-700">
                 Enter your email, confirm the phone number stored on your account, then choose a new password.
               </div>

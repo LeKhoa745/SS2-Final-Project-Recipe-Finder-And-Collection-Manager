@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
@@ -18,8 +19,23 @@ import ResetPassword from "./pages/ResetPassword";
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
   const location = useLocation();
+  const [init, setInit] = React.useState(false);
+
+  React.useEffect(() => {
+    // Small delay to ensure localStorage is read and router context is ready
+    setInit(true);
+  }, []);
+
   const chromeLessPaths = ["/login", "/signup", "/settings", "/forgot-password", "/reset-password"];
   const hideNav = chromeLessPaths.includes(location.pathname);
+
+  if (!init) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fff8f5]">
+        <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-orange-200 border-t-orange-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>

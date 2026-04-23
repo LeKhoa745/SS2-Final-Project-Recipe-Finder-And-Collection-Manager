@@ -28,7 +28,6 @@ export default function OAuthCallback() {
             accessToken: token,
             user: data.data.user,
           });
-          alert(`Google login thanh cong! Chao ${data.data.user.name}`);
           navigate("/");
           return;
         }

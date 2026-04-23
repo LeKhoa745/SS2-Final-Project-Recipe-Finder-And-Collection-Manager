@@ -14,8 +14,8 @@ export const AuthController = {
   // POST /api/auth/register
   async register(req, res, next) {
     try {
-      const { name, email, password } = req.body;
-      const { user, accessToken, refreshToken } = await AuthService.register({ name, email, password });
+      const { name, email, password, phone } = req.body;
+      const { user, accessToken, refreshToken } = await AuthService.register({ name, email, password, phone });
 
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       sendSuccess(res, { user, accessToken }, 'Account created successfully', 201);
@@ -81,9 +81,16 @@ export const AuthController = {
       const nextPhone = req.body.phone ?? currentUser.phone;
       const nextPassword = typeof req.body.password === 'string' ? req.body.password.trim() : '';
 
-      const existing = await UserModel.findByEmail(nextEmail);
-      if (existing && existing.id !== req.user.id) {
+      const existingEmail = await UserModel.findByEmail(nextEmail);
+      if (existingEmail && existingEmail.id !== req.user.id) {
         throw new AppError('Email already registered', 409);
+      }
+
+      if (nextPhone) {
+        const existingPhone = await UserModel.findByPhone(nextPhone);
+        if (existingPhone && existingPhone.id !== req.user.id) {
+          throw new AppError('Phone number already registered', 409);
+        }
       }
 
       const passwordHash = nextPassword ? await bcrypt.hash(nextPassword, 12) : null;
@@ -161,6 +168,14 @@ export const AuthController = {
     try {
       await AuthService.verifyResetPhone(req.body.email, req.body.phone);
       sendSuccess(res, { email: req.body.email, verified: true }, 'Phone number confirmed.');
+    } catch (err) { next(err); }
+  },
+
+  async verifyResetIdentity(req, res, next) {
+    try {
+      const { identity } = req.body;
+      const { token } = await AuthService.verifyResetIdentity(identity);
+      sendSuccess(res, { token }, 'Identity verified. You can now reset your password.');
     } catch (err) { next(err); }
   },
 
