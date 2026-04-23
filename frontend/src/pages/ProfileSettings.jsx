@@ -543,6 +543,12 @@ export default function ProfileSettings() {
                       </div>
                     </div>
                   </div>
+                  <div className="mt-4 flex justify-end">
+                    <Link to="/forgot-password" size="sm" className="text-sm font-bold text-orange-600 hover:underline flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">lock_reset</span>
+                      Forgot password or want to reset via phone?
+                    </Link>
+                  </div>
                 </div>
 
                 {message && (

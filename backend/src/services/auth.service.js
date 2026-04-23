@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { UserModel } from '../models/user.model.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
+import { sendEmail } from '../utils/email.util.js';
 
 // ── Token helpers ──────────────────────────────────────────────
 export const generateTokens = async (user) => {
@@ -25,18 +26,28 @@ export const generateTokens = async (user) => {
 
 // ── Auth Service ───────────────────────────────────────────────
 export const AuthService = {
-  async register({ name, email, password }) {
-    const existing = await UserModel.findByEmail(email);
-    if (existing) throw new AppError('Email already registered', 409);
+  async register({ name, email, password, phone }) {
+    const existingEmail = await UserModel.findByEmail(email);
+    if (existingEmail) throw new AppError('Email already registered', 409);
+
+    if (phone) {
+      const existingPhone = await UserModel.findByPhone(phone);
+      if (existingPhone) throw new AppError('Phone number already registered', 409);
+    }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await UserModel.create({ name, email, passwordHash });
+    const user = await UserModel.create({ name, email, passwordHash, phone });
     const tokens = await generateTokens(user);
     return { user, ...tokens };
   },
 
   async login({ email, password }) {
-    const user = await UserModel.findByEmail(email);
+    // Determine if input is email or phone
+    const isEmail = email.includes('@');
+    const user = isEmail 
+      ? await UserModel.findByEmail(email) 
+      : await UserModel.findByPhone(email);
+
     if (!user || !user.password_hash) {
       throw new UnauthorizedError('Invalid credentials');
     }
@@ -100,14 +111,50 @@ export const AuthService = {
 
     await UserModel.saveResetToken(user.id, token, expiresAt);
 
-    // Simulate sending email by logging to console
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-    console.log('\n\n================================================');
-    console.log('🔗 PASSWORD RESET LINK:');
-    console.log(resetUrl);
-    console.log('================================================\n\n');
+    
+    await sendEmail({
+      to: user.email,
+      subject: 'Password Reset Request - Recipe Finder',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #ea580c;">Recipe Finder</h2>
+          <p>Hi ${user.name},</p>
+          <p>You requested a password reset. Please click the button below to set a new password. This link will expire in 1 hour.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+          </div>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #666;">If the button above doesn't work, copy and paste this link: <br/> ${resetUrl}</p>
+        </div>
+      `,
+    });
 
     return true;
+  },
+
+  async verifyResetIdentity(identity) {
+    let user;
+    if (identity.includes('@')) {
+      user = await UserModel.findByEmail(identity);
+    } else {
+      user = await UserModel.findByPhone(identity);
+    }
+
+    if (!user) {
+      throw new AppError('Identity not found. Please check your email or phone number.', 404);
+    }
+
+    if (!user.password_hash) {
+      throw new AppError('This account was created via Google. Please use Google Login.', 400);
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 1800000); // 30 minutes
+    await UserModel.saveResetToken(user.id, token, expiresAt);
+
+    return { token };
   },
 
   async resetPassword(token, newPassword) {

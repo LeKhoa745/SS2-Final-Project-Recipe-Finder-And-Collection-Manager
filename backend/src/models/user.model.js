@@ -25,6 +25,12 @@ export const UserModel = {
     return rows[0] || null;
   },
 
+  async findByPhone(phone) {
+    // Search with exact or normalized suffix match if needed, here we use LIKE for flexibilty with +84
+    const [rows] = await pool.query('SELECT * FROM users WHERE phone = ? OR phone LIKE ?', [phone, `%${phone.slice(-9)}`]);
+    return rows[0] || null;
+  },
+
   async findByGoogleId(googleId) {
     const [rows] = await pool.query('SELECT * FROM users WHERE google_id = ?', [googleId]);
     return rows[0] || null;
@@ -108,11 +114,29 @@ export const UserModel = {
   },
 
   async findResetToken(token) {
+    console.log('--- DEBUG: Finding reset token:', token);
     const [rows] = await pool.query(
-      'SELECT pt.*, u.email FROM password_reset_tokens pt JOIN users u ON u.id = pt.user_id WHERE pt.token = ? AND pt.expires_at > NOW()',
+      'SELECT pt.*, u.email FROM password_reset_tokens pt JOIN users u ON u.id = pt.user_id WHERE pt.token = ?',
       [token]
     );
-    return rows[0] || null;
+    
+    if (!rows[0]) {
+      console.log('--- DEBUG: Token not found in DB');
+      return null;
+    }
+    
+    const now = new Date();
+    const expiresAt = new Date(rows[0].expires_at);
+    
+    console.log('--- DEBUG: Current time:', now.toISOString());
+    console.log('--- DEBUG: Token expires at:', expiresAt.toISOString());
+    
+    if (expiresAt < now) {
+      console.log('--- DEBUG: Token is expired');
+      return null;
+    }
+    
+    return rows[0];
   },
 
   async deleteResetToken(token) {

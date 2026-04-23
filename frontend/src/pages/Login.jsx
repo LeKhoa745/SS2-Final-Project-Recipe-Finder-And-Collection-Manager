@@ -40,7 +40,6 @@ export default function Login() {
         user: data.data.user,
       });
 
-      alert(`🎉 Login successful!\nWelcome back, ${data.data.user.name || email}!`);
       navigate("/");
     } catch {
       setError("⚠️ Cannot reach the server. Please try again later.");
@@ -92,13 +91,13 @@ export default function Login() {
                 {/* Email */}
                 <div className="space-y-2">
                   <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-2">
-                    🥗 EMAIL ADDRESS
+                    🥗 EMAIL or PHONE
                   </label>
                   <input
                     ref={emailRef}
-                    type="email"
+                    type="text"
                     required
-                    placeholder="customer123@gmail.com"
+                    placeholder="email@chef.com or +84..."
                     className="w-full bg-white/70 border border-gray-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-orange-500 outline-none text-on-surface placeholder:text-gray-400"
                   />
                 </div>

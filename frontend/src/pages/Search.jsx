@@ -12,13 +12,21 @@ export default function Search() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const q = searchParams.get("q");
-    if (q) {
-      fetchRecipes(q);
-    } else {
-      setRecipes([]);
-      setCommunityRecipes([]);
+    const q = searchParams.get("q") || "";
+    if (!q) {
+      const saved = sessionStorage.getItem("last_search_results");
+      if (saved) {
+        try {
+          const { recipes, communityRecipes } = JSON.parse(saved);
+          setRecipes(recipes);
+          setCommunityRecipes(communityRecipes);
+          return; // Skip fetch if we have saved results and no new query
+        } catch (e) {
+          console.error("Failed to parse saved search", e);
+        }
+      }
     }
+    fetchRecipes(q);
   }, [searchParams]);
 
   const fetchRecipes = async (query) => {
@@ -26,8 +34,19 @@ export default function Search() {
     setError(null);
     try {
       const data = await recipeService.search({ q: query });
-      setRecipes(data.data.results || []);
-      setCommunityRecipes(data.data.communityResults || []);
+      const mainRecipes = data.data.results || [];
+      const commRecipes = data.data.communityResults || [];
+      
+      setRecipes(mainRecipes);
+      setCommunityRecipes(commRecipes);
+      
+      // Save to session storage
+      sessionStorage.setItem("last_search_results", JSON.stringify({
+        query,
+        recipes: mainRecipes,
+        communityRecipes: commRecipes,
+        timestamp: Date.now()
+      }));
     } catch (err) {
       console.error('Search failed:', err);
       setError('❌ Failed to fetch recipes. Please try again.');
@@ -37,11 +56,7 @@ export default function Search() {
   };
 
   const handleSearchSubmit = (query) => {
-    if (query) {
-      setSearchParams({ q: query });
-    } else {
-      setSearchParams({});
-    }
+    setSearchParams({ q: query || "" });
   };
 
   return (
@@ -92,6 +107,13 @@ export default function Search() {
               </div>
             )}
           </>
+        ) : !loading && !error && searchParams.get("q") === "" ? (
+          <div>
+            <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-2xl font-bold text-[#2d1b11]">
+               All Recipes
+            </h2>
+            <p className="text-center text-gray-500 text-xl py-20">Browse our collection of curated recipes. 🍳</p>
+          </div>
         ) : !loading && !error && searchParams.get("q") ? (
           <p className="text-center text-gray-500 text-xl py-20">Recipe not found.</p>
         ) : !loading && !error && (

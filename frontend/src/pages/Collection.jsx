@@ -155,6 +155,14 @@ export default function Collection() {
   };
 
   /* ── not logged in ──────────────── */
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fff8f5] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-orange-200 border-t-orange-600"></div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#fff8f5] flex items-center justify-center px-6">

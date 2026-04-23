@@ -14,11 +14,12 @@ const registerRules = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }),
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  body('phone').optional().matches(/^\+84\d{9}$/).withMessage('Phone must be +84 followed by 9 digits'),
 ];
 
 const loginRules = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty(),
+  body('email').notEmpty().withMessage('Email or Phone required'),
+  body('password').notEmpty().withMessage('Password required'),
 ];
 
 const updateProfileRules = [
@@ -67,6 +68,14 @@ router.post('/forgot-password',
   [body('email').isEmail().normalizeEmail().withMessage('Valid email required')],
   handleValidationErrors,
   AuthController.forgotPassword
+);
+
+router.post('/verify-reset-identity',
+  [
+    body('identity').notEmpty().withMessage('Email or Phone number is required')
+  ],
+  handleValidationErrors,
+  AuthController.verifyResetIdentity
 );
 
 router.post('/reset-password',

@@ -5,7 +5,13 @@ import { clearSession, getAccessToken, getStoredUser } from "../utils/session";
 export default function Navbar() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(!!getAccessToken());
-  const [user, setUser] = useState(getStoredUser());
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const syncSession = () => {
