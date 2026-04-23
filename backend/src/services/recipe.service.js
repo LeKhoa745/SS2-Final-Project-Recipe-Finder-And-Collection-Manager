@@ -1,6 +1,18 @@
 import { spoonacularClient, cachedGet } from '../utils/apiClient.js';
-import { MOCK_SEARCH_RESULTS, MOCK_RECIPE_DETAILS, MOCK_SIMILAR_RECIPES } from '../utils/mockData.js';
+import { MOCK_SEARCH_RESULTS } from '../utils/mockData.js';
 import { logger } from '../utils/logger.js';
+import { UserRecipeModel } from '../models/userRecipe.model.js';
+
+const isMockEnabled = () => process.env.MOCK_API === 'true';
+const shouldForceMockRecipes = () => process.env.FORCE_MOCK_RECIPES === 'true';
+
+const isRecipeApiFallbackError = (err) => {
+  return err.response?.status === 402 || err.code === 'ECONNREFUSED';
+};
+
+const logRecipeFallback = (err, context) => {
+  logger.warn(`API Fallback triggered for ${context}: ${err.message}`);
+};
 
 const SEARCH_TTL = parseInt(process.env.CACHE_RECIPE_SEARCH_TTL, 10) || 600;
 const DETAIL_TTL = parseInt(process.env.CACHE_RECIPE_DETAIL_TTL, 10) || 3600;
@@ -30,7 +42,7 @@ export const RecipeService = {
       } else {
         // Get some 'featured' community recipes
         const res = await UserRecipeModel.searchPublic('', { page: 1, limit: 6 });
-        communityResults = res.recipes;
+        communityResults = res.recipes || [];
       }
 
       // Transform community recipes into a card-friendly shape
@@ -58,29 +70,20 @@ export const RecipeService = {
         return {
           results: filteredResults,
           totalResults: filteredResults.length,
+          communityResults,
           page,
           limit,
           totalPages: 1,
         };
       }
 
-      const params = {
-        number: limit,
-        offset: (page - 1) * limit,
-        addRecipeInformation: true,
-        fillIngredients: false,
-        ...(query       && { query }),
-        ...(ingredients && { includeIngredients: ingredients }),
-        ...(cuisine     && { cuisine }),
-        ...(diet        && { diet }),
-        ...(type        && { type }),
-      };
-
+      const params = buildSearchParams({ query, ingredients, cuisine, diet, type, page, limit });
       const data = await cachedGet(spoonacularClient, '/recipes/complexSearch', params, SEARCH_TTL);
 
       return {
         results:     data.results,
         totalResults: data.totalResults,
+        communityResults,
         page,
         limit,
         totalPages: Math.max(1, Math.ceil((data.totalResults || 0) / limit)),
@@ -97,6 +100,7 @@ export const RecipeService = {
         return {
           results: filteredResults,
           totalResults: filteredResults.length,
+          communityResults,
           page,
           limit,
           totalPages: 1,
@@ -107,10 +111,7 @@ export const RecipeService = {
   },
 
   async getById(id) {
-    if (shouldForceMockRecipes()) {
-      return MockRecipeService.getById(id);
-    }
-
+    // Detail logic...
     try {
       const recipe = await cachedGet(
         spoonacularClient,
@@ -122,16 +123,11 @@ export const RecipeService = {
       return recipe ? { ...recipe, source: 'live' } : null;
     } catch (error) {
       if (!isRecipeApiFallbackError(error)) throw error;
-      logRecipeFallback(error, `detail:${id}`);
-      return MockRecipeService.getById(id);
+      return null;
     }
   },
 
   async getSimilar(id) {
-    if (shouldForceMockRecipes()) {
-      return MockRecipeService.getSimilar(id);
-    }
-
     try {
       const recipes = await cachedGet(
         spoonacularClient,
@@ -145,16 +141,11 @@ export const RecipeService = {
         : [];
     } catch (error) {
       if (!isRecipeApiFallbackError(error)) throw error;
-      logRecipeFallback(error, `similar:${id}`);
-      return MockRecipeService.getSimilar(id);
+      return [];
     }
   },
 
   async getIngredients(id) {
-    if (shouldForceMockRecipes()) {
-      return MockRecipeService.getIngredients(id);
-    }
-
     try {
       const data = await cachedGet(
         spoonacularClient,
@@ -166,8 +157,7 @@ export const RecipeService = {
       return data.ingredients || [];
     } catch (error) {
       if (!isRecipeApiFallbackError(error)) throw error;
-      logRecipeFallback(error, `ingredients:${id}`);
-      return MockRecipeService.getIngredients(id);
+      return [];
     }
   },
 
@@ -180,15 +170,6 @@ export const RecipeService = {
   },
 
   async getStatus() {
-    if (shouldForceMockRecipes()) {
-      return {
-        mode: 'mock',
-        usingFallback: true,
-        provider: 'bundled-sample-data',
-        ...MockRecipeService.getStatus(),
-      };
-    }
-
     return {
       mode: 'live',
       usingFallback: false,
