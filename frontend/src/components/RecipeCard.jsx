@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
-export default function RecipeCard({ id, title, image, onWishlist, source, authorName }) {
+export default function RecipeCard({ id, title, image, onWishlist, onUnsave, source, authorName }) {
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
