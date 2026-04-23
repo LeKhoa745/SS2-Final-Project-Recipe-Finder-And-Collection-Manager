@@ -82,6 +82,7 @@ router.post('/verify-reset-identity',
   ],
   handleValidationErrors,
   AuthController.verifyResetIdentity
+);
 
 router.post('/verify-reset-phone',
   [
@@ -93,7 +94,6 @@ router.post('/verify-reset-phone',
   ],
   handleValidationErrors,
   AuthController.verifyResetPhone
-
 );
 
 router.post('/reset-password',

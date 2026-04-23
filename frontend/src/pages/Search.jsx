@@ -14,62 +14,54 @@ export default function Search() {
   const currentQuery = searchParams.get("q")?.trim() || "";
 
   useEffect(() => {
-    const q = searchParams.get("q") || "";
-    if (!q) {
+    const fetchRecipes = async (query) => {
+      setLoading(true);
+      setError(null);
+  
+      try {
+        const params = query ? { q: query } : { limit: 24 };
+        const data = await recipeService.search(params);
+        
+        const mainRecipes = data.data.results || [];
+        const commRecipes = data.data.communityResults || [];
+        
+        setRecipes(mainRecipes);
+        setCommunityRecipes(commRecipes);
+        
+        // Save to session storage
+        sessionStorage.setItem("last_search_results", JSON.stringify({
+          query,
+          recipes: mainRecipes,
+          communityRecipes: commRecipes,
+          timestamp: Date.now()
+        }));
+      } catch (err) {
+        console.error("Search failed:", err);
+        setError("Failed to fetch recipes. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!currentQuery) {
       const saved = sessionStorage.getItem("last_search_results");
       if (saved) {
         try {
-          const { recipes, communityRecipes } = JSON.parse(saved);
-          setRecipes(recipes);
-          setCommunityRecipes(communityRecipes);
-          return; // Skip fetch if we have saved results and no new query
+          const { recipes: savedRecipes, communityRecipes: savedComm } = JSON.parse(saved);
+          setRecipes(savedRecipes);
+          setCommunityRecipes(savedComm);
+          return;
         } catch (e) {
           console.error("Failed to parse saved search", e);
         }
       }
     }
-    fetchRecipes(q);
-  }, [searchParams]);
-
+    
     fetchRecipes(currentQuery);
   }, [currentQuery]);
 
-  const fetchRecipes = async (query) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await recipeService.search({ q: query });
-      const mainRecipes = data.data.results || [];
-      const commRecipes = data.data.communityResults || [];
-      
-      setRecipes(mainRecipes);
-      setCommunityRecipes(commRecipes);
-      
-      // Save to session storage
-      sessionStorage.setItem("last_search_results", JSON.stringify({
-        query,
-        recipes: mainRecipes,
-        communityRecipes: commRecipes,
-        timestamp: Date.now()
-      }));
-
-      const params = query ? { q: query } : { limit: 24 };
-      const data = await recipeService.search(params);
-      setRecipes(data.data.results || []);
-      setCommunityRecipes(data.data.communityResults || []);
-    } catch (err) {
-      console.error("Search failed:", err);
-      setError("Failed to fetch recipes. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSearchSubmit = (query) => {
-    setSearchParams({ q: query || "" });
-
-    const trimmedQuery = query.trim();
+    const trimmedQuery = query?.trim() || "";
     if (trimmedQuery) {
       setSearchParams({ q: trimmedQuery });
     } else {
@@ -129,14 +121,6 @@ export default function Search() {
               </div>
             )}
           </>
-        ) : !loading && !error && searchParams.get("q") === "" ? (
-          <div>
-            <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-2xl font-bold text-[#2d1b11]">
-               All Recipes
-            </h2>
-            <p className="text-center text-gray-500 text-xl py-20">Browse our collection of curated recipes. 🍳</p>
-          </div>
-        ) : !loading && !error && searchParams.get("q") ? (
         ) : !loading && !error && currentQuery ? (
           <p className="text-center text-gray-500 text-xl py-20">Recipe not found.</p>
         ) : !loading && !error && (

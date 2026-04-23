@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { UserModel } from '../models/user.model.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
 import { sendEmail } from '../utils/email.util.js';
@@ -112,10 +113,10 @@ export const AuthService = {
   async forgotPassword(email) {
     const user = await getPasswordResetUser(email);
 
-    return {
-      phoneHint: user.phone,
-    };
-  },
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+    await UserModel.saveResetToken(user.id, token, expiresAt);
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
@@ -136,6 +137,12 @@ export const AuthService = {
         </div>
       `,
     });
+
+    return {
+      phoneHint: user.phone,
+    };
+  },
+
   async verifyResetPhone(email, phone) {
     const user = await getPasswordResetUser(email);
     if (normalizePhone(user.phone) !== normalizePhone(phone)) {
@@ -168,9 +175,6 @@ export const AuthService = {
     return { token };
   },
 
-  async resetPassword(token, newPassword) {
-    const resetRequest = await UserModel.findResetToken(token);
-    if (!resetRequest) throw new AppError('Invalid or expired reset token', 400);
   async resetPassword(email, phone, newPassword) {
     const user = await getPasswordResetUser(email);
     if (normalizePhone(user.phone) !== normalizePhone(phone)) {
