@@ -7,11 +7,13 @@ const BASE_URL = '/api';
 export async function apiClient(endpoint, options = {}) {
   const token = localStorage.getItem('accessToken');
   
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-    ...options.headers,
-  };
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,

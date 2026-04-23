@@ -36,4 +36,13 @@ export const wishlistService = {
       method:  'DELETE',
     });
   },
+
+  /**
+   * Clear all recipes from the wishlist.
+   */
+  async removeAll() {
+    return apiClient(`/wishlist/all`, {
+      method:  'DELETE',
+    });
+  },
 };

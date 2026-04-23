@@ -5,13 +5,14 @@ import { getStoredUser, updateStoredUser } from "../utils/session";
 
 const topLinks = [
   { label: "Recipes", href: "/search" },
-  { label: "Collections", href: "/wishlist" },
+  { label: "Collection", href: "/collection" },
+  { label: "Saved Recipes", href: "/wishlist" },
   { label: "Settings", href: "/settings", active: true },
 ];
 
 const sideLinks = [
   { icon: "search", label: "Search Recipes", href: "/search" },
-  { icon: "menu_book", label: "My Collections", href: "/wishlist" },
+  { icon: "menu_book", label: "Collection", href: "/collection" },
   { icon: "bookmark", label: "Saved Recipes", href: "/wishlist" },
   { icon: "settings", label: "Profile Settings", href: "/settings", active: true },
 ];
@@ -47,6 +48,25 @@ export default function ProfileSettings() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [showAvatarUrl, setShowAvatarUrl] = useState(false);
+
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // For tracking changes
+  const isDirty = (
+    formData.fullName !== (user?.name || "") ||
+    formData.email !== (user?.email || "") ||
+    formData.avatar !== (user?.avatar || "") ||
+    formData.phoneDigits !== getPhoneDigits(user?.phone) ||
+    passwordData.newPassword !== ""
+  );
 
   useEffect(() => {
     const syncUser = () => {
@@ -96,7 +116,7 @@ export default function ProfileSettings() {
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleAvatarFileChange = (event) => {
+  const handleAvatarFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -107,20 +127,29 @@ export default function ProfileSettings() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
+    const formDataUpload = new FormData();
+    formDataUpload.append("avatar", file);
+
+    try {
       setAvatarLoadFailed(false);
       setError("");
-      setMessage("");
+      setMessage("Uploading avatar...");
+
+      const response = await apiClient("/auth/avatar", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      setUser(response.data.user);
+      updateStoredUser(response.data.user);
       setFormData((current) => ({
         ...current,
-        avatar: typeof reader.result === "string" ? reader.result : "",
+        avatar: response.data.avatarUrl || response.data.user.avatar,
       }));
-    };
-    reader.onerror = () => {
-      setError("Unable to read the selected image.");
-    };
-    reader.readAsDataURL(file);
+      setMessage("Avatar uploaded successfully!");
+    } catch (apiError) {
+      setError(apiError.message || "Failed to upload avatar.");
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -136,6 +165,25 @@ export default function ProfileSettings() {
     setMessage("");
     setError("");
 
+    // Validate password if user is trying to change it
+    if (passwordData.newPassword) {
+      if (passwordData.newPassword.length < 8) {
+        setError("New password must be at least 8 characters.");
+        setSaving(false);
+        return;
+      }
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setError("New passwords do not match.");
+        setSaving(false);
+        return;
+      }
+      if (user?.hasPassword && !passwordData.oldPassword) {
+        setError("Current password is required to set a new one.");
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const nextPassword = formData.newPassword.trim();
       const response = await apiClient("/auth/me", {
@@ -145,26 +193,26 @@ export default function ProfileSettings() {
           email: formData.email.trim(),
           avatar: formData.avatar,
           phone: formData.phoneDigits ? `+84${formData.phoneDigits}` : null,
-          password: nextPassword || undefined,
         }),
       });
 
       setUser(response.data.user);
       updateStoredUser(response.data.user);
       setAvatarLoadFailed(false);
-      setFormData((current) => ({
-        ...current,
-        avatar: response.data.user.avatar || "",
-        newPassword: "",
-        confirmNewPassword: "",
-      }));
-      setMessage(nextPassword ? "😊 New password has been updated!" : "Profile updated successfully.");
+      setMessage("Profile updated successfully.");
     } catch (apiError) {
       const validationMessage = apiError.data?.errors?.[0]?.message;
       setError(validationMessage || apiError.message || "Unable to update profile right now.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+    setError("");
+    setMessage("");
   };
 
   const handleCancel = () => {
@@ -177,6 +225,7 @@ export default function ProfileSettings() {
       newPassword: "",
       confirmNewPassword: "",
     });
+    setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
     setMessage("");
     setError("");
   };
@@ -255,13 +304,13 @@ export default function ProfileSettings() {
         </nav>
 
         <div className="px-6 py-4">
-          <button
-            type="button"
-            className="w-full rounded-full px-6 py-4 font-headline font-bold uppercase tracking-widest text-white transition-all active:opacity-80"
+          <Link
+            to="/"
+            className="block text-center w-full rounded-full px-6 py-4 font-headline font-bold uppercase tracking-widest text-white transition-all active:opacity-80"
             style={{ background: "linear-gradient(135deg, #954b00 0%, #ffaf75 100%)" }}
           >
             Start Cooking
-          </button>
+          </Link>
         </div>
 
         <div className="mt-auto space-y-1">
@@ -330,7 +379,7 @@ export default function ProfileSettings() {
               </button>
 
               <p className="mt-8 text-xs leading-relaxed text-[#655f47]">
-                Upload a JPG, PNG, or WebP image from your device.
+                Upload an image or paste an avatar URL below.
                 <br />
                 Changes save to your account.
               </p>
@@ -402,50 +451,6 @@ export default function ProfileSettings() {
                   </p>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="newPassword"
-                    className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                  >
-                    New Password
-                  </label>
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    value={formData.newPassword}
-                    onChange={handleChange}
-                    placeholder="Enter your new password"
-                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                  />
-                  <p className="mt-2 text-sm text-[#655f47]">
-                    Leave this blank if you do not want to change your password.
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="confirmNewPassword"
-                    className="mb-3 block font-headline text-sm font-bold uppercase tracking-widest text-[#37331e]"
-                  >
-                    Confirm New Password
-                  </label>
-                  <input
-                    id="confirmNewPassword"
-                    name="confirmNewPassword"
-                    type="password"
-                    value={formData.confirmNewPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm your new password"
-                    className="w-full rounded-xl bg-[#f6eed5] p-4 font-body text-[#37331e] outline-none transition-all focus:ring-2 focus:ring-[#954b00]"
-                  />
-                  {isPasswordChange && (
-                    <p className={`mt-2 text-sm font-medium ${passwordMismatch ? "text-red-700" : "text-green-700"}`}>
-                      {passwordMismatch ? "😢 Passwords do not match." : "😊 New password has been updated!"}
-                    </p>
-                  )}
-                </div>
-
                 {message && (
                   <p className="rounded-xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                     {message}
@@ -461,9 +466,9 @@ export default function ProfileSettings() {
                 <div className="flex flex-wrap items-center gap-4 pt-10">
                   <button
                     type="submit"
-                    disabled={saving || formData.phoneDigits.length !== 9}
-                    className="rounded-full px-10 py-4 font-headline font-extrabold uppercase tracking-widest text-white transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
-                    style={{ background: "linear-gradient(135deg, #954b00 0%, #ffaf75 100%)" }}
+                    disabled={saving || !isDirty || (formData.phoneDigits.length > 0 && formData.phoneDigits.length !== 9)}
+                    className="rounded-full px-10 py-4 font-headline font-extrabold uppercase tracking-widest text-white transition-all hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:grayscale disabled:opacity-50"
+                    style={{ background: isDirty ? "linear-gradient(135deg, #954b00 0%, #ffaf75 100%)" : "#ccc" }}
                   >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>

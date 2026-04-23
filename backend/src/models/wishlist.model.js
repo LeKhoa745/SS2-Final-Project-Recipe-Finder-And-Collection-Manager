@@ -28,9 +28,37 @@ export const WishlistModel = {
   },
 
   async remove(userId, recipeId) {
+    // 1. Copy to deleted_wishlist_items
+    await pool.query(
+      `INSERT INTO deleted_wishlist_items (user_id, recipe_id, recipe_title, recipe_image)
+       SELECT user_id, recipe_id, recipe_title, recipe_image 
+       FROM wishlist_items 
+       WHERE user_id = ? AND recipe_id = ?`,
+      [userId, recipeId]
+    );
+
+    // 2. Remove
     const [result] = await pool.query(
       'DELETE FROM wishlist_items WHERE user_id = ? AND recipe_id = ?',
       [userId, recipeId]
+    );
+    return result.affectedRows > 0;
+  },
+
+  async removeAll(userId) {
+    // 1. Copy all to deleted_wishlist_items
+    await pool.query(
+      `INSERT INTO deleted_wishlist_items (user_id, recipe_id, recipe_title, recipe_image)
+       SELECT user_id, recipe_id, recipe_title, recipe_image 
+       FROM wishlist_items 
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    // 2. Remove all
+    const [result] = await pool.query(
+      'DELETE FROM wishlist_items WHERE user_id = ?',
+      [userId]
     );
     return result.affectedRows > 0;
   },
