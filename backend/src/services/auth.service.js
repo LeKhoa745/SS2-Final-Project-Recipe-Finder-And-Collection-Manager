@@ -143,9 +143,12 @@ export const AuthService = {
     };
   },
 
-  async verifyResetPhone(email, phone) {
-    const user = await getPasswordResetUser(email);
-    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
+  async verifyResetPhone(token, phone) {
+    const resetToken = await UserModel.findResetToken(token);
+    if (!resetToken) throw new AppError('Invalid or expired reset token', 400);
+
+    const user = await UserModel.findById(resetToken.user_id);
+    if (!user || normalizePhone(user.phone) !== normalizePhone(phone)) {
       throw new AppError('Phone number does not match our records.', 400);
     }
 
@@ -172,17 +175,22 @@ export const AuthService = {
     const expiresAt = new Date(Date.now() + 1800000); // 30 minutes
     await UserModel.saveResetToken(user.id, token, expiresAt);
 
-    return { token };
+    // Return token and phone hint
+    const phone = user.phone || "";
+    const phoneHint = phone.length > 3 
+      ? "*".repeat(phone.length - 3) + phone.slice(-3)
+      : phone;
+
+    return { token, phoneHint };
   },
 
-  async resetPassword(email, phone, newPassword) {
-    const user = await getPasswordResetUser(email);
-    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
-      throw new AppError('Phone number does not match our records.', 400);
-    }
+  async resetPassword(token, newPassword) {
+    const resetToken = await UserModel.findResetToken(token);
+    if (!resetToken) throw new AppError('Invalid or expired reset token', 400);
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await UserModel.updatePassword(user.id, passwordHash);
+    await UserModel.updatePassword(resetToken.user_id, passwordHash);
+    await UserModel.deleteResetToken(token);
 
     return true;
   },

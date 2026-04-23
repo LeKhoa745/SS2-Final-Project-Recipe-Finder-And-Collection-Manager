@@ -185,7 +185,6 @@ export default function ProfileSettings() {
     }
 
     try {
-      const nextPassword = formData.newPassword.trim();
       const response = await apiClient("/auth/me", {
         method: "PATCH",
         body: JSON.stringify({
@@ -193,12 +192,15 @@ export default function ProfileSettings() {
           email: formData.email.trim(),
           avatar: formData.avatar,
           phone: formData.phoneDigits ? `+84${formData.phoneDigits}` : null,
+          oldPassword: passwordData.oldPassword,
+          newPassword: passwordData.newPassword,
         }),
       });
 
       setUser(response.data.user);
       updateStoredUser(response.data.user);
       setAvatarLoadFailed(false);
+      setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setMessage("Profile updated successfully.");
     } catch (apiError) {
       const validationMessage = apiError.data?.errors?.[0]?.message;

@@ -79,8 +79,6 @@ export const AuthController = {
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
       const nextPhone = req.body.phone ?? currentUser.phone;
-      const nextPassword = typeof req.body.password === 'string' ? req.body.password.trim() : '';
-
       const existingEmail = await UserModel.findByEmail(nextEmail);
       if (existingEmail && existingEmail.id !== req.user.id) {
         throw new AppError('Email already registered', 409);
@@ -93,14 +91,11 @@ export const AuthController = {
         }
       }
 
-      const passwordHash = nextPassword ? await bcrypt.hash(nextPassword, 12) : null;
-
-      const user = await UserModel.updateProfile(req.user.id, {
+      await UserModel.updateProfile(req.user.id, {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
         phone: nextPhone,
-        passwordHash,
       });
 
       // Handle password update if provided
@@ -108,6 +103,9 @@ export const AuthController = {
       if (newPassword) {
         await AuthService.updatePassword({ userId: req.user.id, oldPassword, newPassword });
       }
+
+      // Fetch the most up-to-date user data (including updated hasPassword state)
+      const user = await UserModel.findById(req.user.id);
 
       sendSuccess(res, { user }, 'Profile updated successfully');
     } catch (err) { next(err); }
@@ -166,8 +164,9 @@ export const AuthController = {
 
   async verifyResetPhone(req, res, next) {
     try {
-      await AuthService.verifyResetPhone(req.body.email, req.body.phone);
-      sendSuccess(res, { email: req.body.email, verified: true }, 'Phone number confirmed.');
+      const { token, phone } = req.body;
+      await AuthService.verifyResetPhone(token, phone);
+      sendSuccess(res, null, 'Phone number confirmed.');
     } catch (err) { next(err); }
   },
 
@@ -181,7 +180,8 @@ export const AuthController = {
 
   async resetPassword(req, res, next) {
     try {
-      await AuthService.resetPassword(req.body.email, req.body.phone, req.body.password);
+      const { token, password } = req.body;
+      await AuthService.resetPassword(token, password);
       sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
     } catch (err) { next(err); }
   },

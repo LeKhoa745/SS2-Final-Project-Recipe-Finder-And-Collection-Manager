@@ -3,14 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 
 const STEPS = {
   identity: 1,
-  password: 2,
-  confirm: 3,
+  phone: 2,
+  password: 3,
 };
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [step, setStep] = useState(STEPS.identity);
   const [identity, setIdentity] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneHint, setPhoneHint] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [token, setToken] = useState("");
@@ -41,6 +43,30 @@ export default function ForgotPassword() {
       if (!res.ok) throw new Error(data.message || "Identity not found");
       
       setToken(data.data.token);
+      setPhoneHint(data.data.phoneHint || "");
+      setStep(STEPS.phone);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyPhone = async (e) => {
+    e.preventDefault();
+    clearFeedback();
+    if (!phone) return setError("Please enter your phone number.");
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/verify-reset-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Phone verification failed");
+
       setStep(STEPS.password);
     } catch (err) {
       setError(err.message);
@@ -164,10 +190,48 @@ export default function ForgotPassword() {
                 )}
               </div>
 
-              {/* BLOCK 2: NEW PASSWORD */}
+              {/* BLOCK 2: PHONE VERIFICATION */}
+              <div className={`space-y-4 p-6 rounded-3xl border transition-all duration-500 ${step === STEPS.phone ? 'bg-white/10 border-orange-500/50 shadow-lg' : 'bg-transparent border-white/10 opacity-60'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= STEPS.phone ? 'bg-orange-600 text-white' : 'bg-white/20 text-white/50'}`}>2</div>
+                  <h4 className="font-bold text-white uppercase tracking-wider text-sm">Security Check</h4>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-label text-[10px] uppercase tracking-widest font-bold text-gray-400">
+                    📱 Phone Number {phoneHint && `(${phoneHint})`}
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    disabled={step !== STEPS.phone}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter full phone number"
+                    className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-orange-500 outline-none text-white placeholder:text-gray-500"
+                  />
+                  {phoneHint && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      Please enter the full phone number associated with this account.
+                    </p>
+                  )}
+                </div>
+
+                {step === STEPS.phone && (
+                  <button
+                    onClick={handleVerifyPhone}
+                    disabled={loading || !phone}
+                    className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition-all active:scale-[0.98]"
+                  >
+                    {loading ? "Verifying..." : "Verify Phone Number"}
+                  </button>
+                )}
+              </div>
+
+              {/* BLOCK 3: NEW PASSWORD */}
               <div className={`space-y-4 p-6 rounded-3xl border transition-all duration-500 ${step === STEPS.password ? 'bg-white/10 border-orange-500/50 shadow-lg' : 'bg-transparent border-white/10 opacity-60'}`}>
                 <div className="flex items-center gap-3 mb-2">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= STEPS.password ? 'bg-orange-600 text-white' : 'bg-white/20 text-white/50'}`}>2</div>
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= STEPS.password ? 'bg-orange-600 text-white' : 'bg-white/20 text-white/50'}`}>3</div>
                   <h4 className="font-bold text-white uppercase tracking-wider text-sm">Set New Password</h4>
                 </div>
 
@@ -196,45 +260,23 @@ export default function ForgotPassword() {
                   </div>
                 </div>
 
-                {step === STEPS.password && (
-                  <button
-                    onClick={() => {
-                      if (password.length < 8) return setError("Password must be at least 8 characters.");
-                      setError("");
-                      setStep(STEPS.confirm);
-                    }}
-                    disabled={!password}
-                    className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition-all active:scale-[0.98]"
-                  >
-                    Confirm Password Choice
-                  </button>
-                )}
-              </div>
-
-              {/* BLOCK 3: CONFIRMATION */}
-              <div className={`space-y-4 p-6 rounded-3xl border transition-all duration-500 ${step === STEPS.confirm ? 'bg-white/10 border-orange-500/50 shadow-lg' : 'bg-transparent border-white/10 opacity-60'}`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= STEPS.confirm ? 'bg-orange-600 text-white' : 'bg-white/20 text-white/50'}`}>3</div>
-                  <h4 className="font-bold text-white uppercase tracking-wider text-sm">Final Confirmation</h4>
-                </div>
-
                 <div className="space-y-2">
                   <label className="font-label text-[10px] uppercase tracking-widest font-bold text-gray-400">
-                    🔄 Repeat Password
+                    🔄 Confirm Password
                   </label>
                   <div className="relative">
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       required
-                      disabled={step !== STEPS.confirm}
+                      disabled={step !== STEPS.password}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat your password"
+                      placeholder="Repeat password"
                       className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 pr-12 focus:ring-2 focus:ring-orange-500 outline-none text-white placeholder:text-gray-500"
                     />
                     <button
                       type="button"
-                      disabled={step !== STEPS.confirm}
+                      disabled={step !== STEPS.password}
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
                     >
@@ -243,10 +285,10 @@ export default function ForgotPassword() {
                   </div>
                 </div>
 
-                {step === STEPS.confirm && (
+                {step === STEPS.password && (
                   <button
                     onClick={handleResetPassword}
-                    disabled={loading || !confirmPassword}
+                    disabled={loading || !password || !confirmPassword}
                     className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-orange-500/20"
                   >
                     {loading ? "Updating..." : "Complete Reset"}

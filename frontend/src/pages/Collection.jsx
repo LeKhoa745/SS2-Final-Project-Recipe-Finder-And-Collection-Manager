@@ -155,7 +155,14 @@ export default function Collection() {
   };
 
   /* ── not logged in ──────────────── */
-  if (loading) {
+  // Transient loading to handle session restoration on reload
+  const [init, setInit] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setInit(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading || !init) {
     return (
       <div className="min-h-screen bg-[#fff8f5] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-orange-200 border-t-orange-600"></div>
