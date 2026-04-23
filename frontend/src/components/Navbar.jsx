@@ -2,6 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearSession, getAccessToken, getStoredUser } from "../utils/session";
 
+function getAvatarFallback(name = "User") {
+  const initial = (name || "User").trim().charAt(0).toUpperCase() || "U";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <rect width="120" height="120" rx="60" fill="#fff1eb" />
+      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#ad2c00">${initial}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 export default function Navbar() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(!!getAccessToken());
@@ -70,7 +81,7 @@ export default function Navbar() {
                 className="hidden items-center gap-3 rounded-2xl bg-orange-50 px-3 py-2 transition-colors hover:bg-orange-100 sm:flex"
               >
                 <img
-                  src={user?.avatar || "https://ui-avatars.com/api/?background=fff1eb&color=ad2c00&name=User"}
+                  src={user?.avatar || getAvatarFallback(user?.name)}
                   alt={user?.name || "User avatar"}
                   className="h-10 w-10 rounded-full object-cover"
                 />

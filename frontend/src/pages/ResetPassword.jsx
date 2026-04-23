@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -54,12 +54,15 @@ export default function ResetPassword() {
       setLoading(false);
     }
   };
+  const legacyToken = searchParams.get("token");
 
   return (
     <div className="bg-background font-body text-on-surface min-h-screen flex flex-col relative overflow-x-hidden">
       <header className="absolute top-0 w-full z-10 flex justify-between items-center px-8 py-6">
         <Link to="/" className="flex items-center gap-3">
-          <span className="text-3xl">🍳</span>
+          <span className="text-3xl" role="img" aria-label="Recipe Finder">
+            🍳
+          </span>
           <span className="text-2xl font-bold text-orange-950 font-headline tracking-tight">
             Recipe Finder
           </span>
@@ -79,45 +82,19 @@ export default function ResetPassword() {
 
         <div className="container mx-auto z-10 flex justify-center">
           <div className="glass-panel w-full max-w-md rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20 backdrop-blur-xl">
-            <h3 className="font-headline text-3xl font-bold text-on-surface mb-2">
-              New Beginnings
+            <h3 className="font-headline text-3xl font-bold text-on-surface mb-3">
+              Reset password flow updated
             </h3>
             <p className="text-gray-600 mb-8 font-medium">
-              Secure your kitchen with a brand new password.
+              Password reset now uses email and phone confirmation instead of email links or secret codes.
             </p>
 
-            {!token ? (
-              <div className="p-6 rounded-2xl bg-orange-50 border border-orange-200 text-orange-800 font-bold text-center">
-                ⚠️ Invalid Reset Link
-                <p className="text-sm font-normal mt-2">The reset token is missing or malformed. Please request a new link.</p>
-                <Link to="/forgot-password" size="sm" className="mt-4 inline-block text-orange-600 underline">Get new link</Link>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant">
-                    🔑 New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-white/70 border border-stone-200 rounded-2xl px-5 py-4 pr-12 focus:ring-2 focus:ring-orange-500 outline-none transition-all placeholder:text-stone-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
-                    >
-                      <span className="material-symbols-outlined">
-                        {showPassword ? "visibility_off" : "visibility"}
-                      </span>
-                    </button>
-                  </div>
+            <div className="space-y-4">
+              {legacyToken && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                  This older reset link is no longer used. Please start again from the forgot password page.
                 </div>
+              )}
 
                 <div className="space-y-2">
                   <label className="font-label text-xs uppercase tracking-wider font-bold text-on-surface-variant">
@@ -156,16 +133,24 @@ export default function ResetPassword() {
                     {error}
                   </div>
                 )}
+              <div className="rounded-2xl border border-white/30 bg-white/70 px-5 py-5 text-sm text-stone-700">
+                Enter your email, confirm the phone number stored on your account, then choose a new password.
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-lg transition-all active:scale-[0.98] shadow-lg disabled:opacity-70"
-                >
-                  {loading ? "Updating..." : "Reset Password"}
-                </button>
-              </form>
-            )}
+              <Link
+                to="/forgot-password"
+                className="block w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-lg text-center transition-all active:scale-[0.98] shadow-lg"
+              >
+                Continue to Forgot Password
+              </Link>
+
+              <Link
+                to="/login"
+                className="block w-full py-4 rounded-2xl border border-stone-300 bg-white/70 text-stone-700 font-bold text-lg text-center transition-all hover:bg-white"
+              >
+                Back to Login
+              </Link>
+            </div>
           </div>
         </div>
       </main>

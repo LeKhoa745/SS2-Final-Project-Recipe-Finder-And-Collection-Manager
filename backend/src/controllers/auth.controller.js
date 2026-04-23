@@ -1,6 +1,7 @@
 import { AuthService } from '../services/auth.service.js';
 import { sendSuccess } from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
+import bcrypt from 'bcryptjs';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -78,6 +79,7 @@ export const AuthController = {
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
       const nextPhone = req.body.phone ?? currentUser.phone;
+      const nextPassword = typeof req.body.password === 'string' ? req.body.password.trim() : '';
 
       const existingEmail = await UserModel.findByEmail(nextEmail);
       if (existingEmail && existingEmail.id !== req.user.id) {
@@ -91,11 +93,14 @@ export const AuthController = {
         }
       }
 
+      const passwordHash = nextPassword ? await bcrypt.hash(nextPassword, 12) : null;
+
       const user = await UserModel.updateProfile(req.user.id, {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
         phone: nextPhone,
+        passwordHash,
       });
 
       // Handle password update if provided
@@ -154,8 +159,15 @@ export const AuthController = {
 
   async forgotPassword(req, res, next) {
     try {
-      await AuthService.forgotPassword(req.body.email);
-      sendSuccess(res, null, 'If your email is registered, you will receive a reset link.');
+      const result = await AuthService.forgotPassword(req.body.email);
+      sendSuccess(res, { email: req.body.email, ...result }, 'Email found. Please confirm your phone number.');
+    } catch (err) { next(err); }
+  },
+
+  async verifyResetPhone(req, res, next) {
+    try {
+      await AuthService.verifyResetPhone(req.body.email, req.body.phone);
+      sendSuccess(res, { email: req.body.email, verified: true }, 'Phone number confirmed.');
     } catch (err) { next(err); }
   },
 
@@ -169,7 +181,7 @@ export const AuthController = {
 
   async resetPassword(req, res, next) {
     try {
-      await AuthService.resetPassword(req.body.token, req.body.password);
+      await AuthService.resetPassword(req.body.email, req.body.phone, req.body.password);
       sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
     } catch (err) { next(err); }
   },
