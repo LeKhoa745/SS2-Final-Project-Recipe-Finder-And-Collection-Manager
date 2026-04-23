@@ -152,14 +152,21 @@ export const AuthController = {
 
   async forgotPassword(req, res, next) {
     try {
-      await AuthService.forgotPassword(req.body.email);
-      sendSuccess(res, null, 'If your email is registered, you will receive a reset link.');
+      const result = await AuthService.forgotPassword(req.body.email);
+      sendSuccess(res, { email: req.body.email, ...result }, 'Email found. Please confirm your phone number.');
+    } catch (err) { next(err); }
+  },
+
+  async verifyResetPhone(req, res, next) {
+    try {
+      await AuthService.verifyResetPhone(req.body.email, req.body.phone);
+      sendSuccess(res, { email: req.body.email, verified: true }, 'Phone number confirmed.');
     } catch (err) { next(err); }
   },
 
   async resetPassword(req, res, next) {
     try {
-      await AuthService.resetPassword(req.body.token, req.body.password);
+      await AuthService.resetPassword(req.body.email, req.body.phone, req.body.password);
       sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
     } catch (err) { next(err); }
   },

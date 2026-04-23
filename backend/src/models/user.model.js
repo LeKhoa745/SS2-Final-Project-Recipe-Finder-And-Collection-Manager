@@ -107,6 +107,10 @@ export const UserModel = {
     );
   },
 
+  async deleteResetTokensByUser(userId) {
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
+  },
+
   async findResetToken(token) {
     const [rows] = await pool.query(
       'SELECT pt.*, u.email FROM password_reset_tokens pt JOIN users u ON u.id = pt.user_id WHERE pt.token = ? AND pt.expires_at > NOW()',
