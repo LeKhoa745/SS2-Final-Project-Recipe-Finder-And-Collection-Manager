@@ -55,7 +55,7 @@ export const CollectionController = {
       if (!recipe.isPublic && (!req.user || req.user.id !== recipe.userId)) {
         throw new ForbiddenError('This recipe is private');
       }
-
+      console.log('here')
       sendSuccess(res, { recipe });
     } catch (err) { next(err); }
   },

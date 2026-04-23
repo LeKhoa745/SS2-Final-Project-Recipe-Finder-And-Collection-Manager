@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { UserModel } from '../models/user.model.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
 
@@ -84,5 +85,39 @@ export const AuthService = {
   // Called after Google OAuth callback
   async handleOAuthLogin(user) {
     return generateTokens(user);
+  },
+
+  async forgotPassword(email) {
+    const user = await UserModel.findByEmail(email);
+    if (!user) throw new AppError('No user found with this email address', 404);
+
+    if (!user.password_hash) {
+      throw new AppError('This account was created via Google. Please use Google Login.', 400);
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    await UserModel.saveResetToken(user.id, token, expiresAt);
+
+    // Simulate sending email by logging to console
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    console.log('\n\n================================================');
+    console.log('🔗 PASSWORD RESET LINK:');
+    console.log(resetUrl);
+    console.log('================================================\n\n');
+
+    return true;
+  },
+
+  async resetPassword(token, newPassword) {
+    const resetRequest = await UserModel.findResetToken(token);
+    if (!resetRequest) throw new AppError('Invalid or expired reset token', 400);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await UserModel.updatePassword(resetRequest.user_id, passwordHash);
+    await UserModel.deleteResetToken(token);
+
+    return true;
   },
 };

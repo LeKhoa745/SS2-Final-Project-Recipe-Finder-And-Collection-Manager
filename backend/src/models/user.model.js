@@ -98,4 +98,24 @@ export const UserModel = {
   async toggleActive(userId, isActive) {
     await pool.query('UPDATE users SET is_active = ? WHERE id = ?', [isActive, userId]);
   },
+
+  // Password Resets
+  async saveResetToken(userId, token, expiresAt) {
+    await pool.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+      [userId, token, expiresAt]
+    );
+  },
+
+  async findResetToken(token) {
+    const [rows] = await pool.query(
+      'SELECT pt.*, u.email FROM password_reset_tokens pt JOIN users u ON u.id = pt.user_id WHERE pt.token = ? AND pt.expires_at > NOW()',
+      [token]
+    );
+    return rows[0] || null;
+  },
+
+  async deleteResetToken(token) {
+    await pool.query('DELETE FROM password_reset_tokens WHERE token = ?', [token]);
+  },
 };
