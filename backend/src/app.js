@@ -10,6 +10,7 @@ import authRoutes    from './routes/auth.routes.js';
 import recipeRoutes  from './routes/recipe.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
+import aiRoutes      from './routes/ai.routes.js';
 import { plannerRouter, shoppingRouter, newsRouter, adminRouter } from './routes/index.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
@@ -52,6 +53,7 @@ app.use('/api/planner',  plannerRouter);
 app.use('/api/shopping', shoppingRouter);
 app.use('/api/news',     newsRouter);
 app.use('/api/admin',    adminRouter);
+app.use('/api/ai',       aiRoutes);
 
 // ── Error Handling ────────────────────────────────────────────
 app.use(notFound);

@@ -111,7 +111,12 @@ export const AuthService = {
   },
 
   async forgotPassword(email) {
-    const user = await getPasswordResetUser(email);
+    const user = await UserModel.findByEmail(email);
+    if (!user) throw new AppError('Invalid email, Try again!', 404);
+
+    if (!user.password_hash) {
+      throw new AppError('This account was created via Google. Please use Google Login.', 400);
+    }
 
     // Generate token
     const token = crypto.randomBytes(32).toString('hex');
@@ -126,7 +131,7 @@ export const AuthService = {
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #ea580c;">Recipe Finder</h2>
-          <p>Hi ${user.name},</p>
+          <p>Hi ${user.name || 'Chef'},</p>
           <p>You requested a password reset. Please click the button below to set a new password. This link will expire in 1 hour.</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
@@ -138,9 +143,7 @@ export const AuthService = {
       `,
     });
 
-    return {
-      phoneHint: user.phone,
-    };
+    return { success: true };
   },
 
   async verifyResetPhone(token, phone) {

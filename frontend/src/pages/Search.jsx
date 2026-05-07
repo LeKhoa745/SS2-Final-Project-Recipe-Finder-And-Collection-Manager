@@ -19,6 +19,7 @@ export default function Search() {
       setError(null);
   
       try {
+        // If no query, fetch a larger set of "default" recipes
         const params = query ? { q: query } : { limit: 24 };
         const data = await recipeService.search(params);
         
@@ -28,7 +29,7 @@ export default function Search() {
         setRecipes(mainRecipes);
         setCommunityRecipes(commRecipes);
         
-        // Save to session storage
+        // Save to session storage for persistence on back/forward or refresh
         sessionStorage.setItem("last_search_results", JSON.stringify({
           query,
           recipes: mainRecipes,
@@ -43,30 +44,36 @@ export default function Search() {
       }
     };
 
-    if (!currentQuery) {
-      const saved = sessionStorage.getItem("last_search_results");
-      if (saved) {
-        try {
-          const { recipes: savedRecipes, communityRecipes: savedComm } = JSON.parse(saved);
-          setRecipes(savedRecipes);
-          setCommunityRecipes(savedComm);
-          return;
-        } catch (e) {
-          console.error("Failed to parse saved search", e);
-        }
+    // On initial mount or query change:
+    // 1. If we have a query, always fetch fresh
+    if (currentQuery) {
+      fetchRecipes(currentQuery);
+      return;
+    }
+
+    // 2. If no query in URL, check if we have saved results from a previous search
+    const saved = sessionStorage.getItem("last_search_results");
+    if (saved) {
+      try {
+        const { query: savedQuery, recipes: savedRecipes, communityRecipes: savedComm } = JSON.parse(saved);
+        // Only use saved if it was ALSO an empty query search, or if we want to restore last state
+        setRecipes(savedRecipes);
+        setCommunityRecipes(savedComm);
+        // If we want to stay fresh, we could still fetch, but for now we restore
+        return;
+      } catch (e) {
+        console.error("Failed to parse saved search", e);
       }
     }
     
-    fetchRecipes(currentQuery);
+    // 3. Fallback: fetch default recipes
+    fetchRecipes("");
   }, [currentQuery]);
 
   const handleSearchSubmit = (query) => {
     const trimmedQuery = query?.trim() || "";
-    if (trimmedQuery) {
-      setSearchParams({ q: trimmedQuery });
-    } else {
-      setSearchParams({});
-    }
+    // If empty query, we still update URL or just refetch everything
+    setSearchParams(trimmedQuery ? { q: trimmedQuery } : {});
   };
 
   return (
@@ -80,46 +87,38 @@ export default function Search() {
 
         {!loading && !error && (communityRecipes.length > 0 || recipes.length > 0) ? (
           <>
-            {!currentQuery && (
-              <h2 className="mb-6 border-l-4 border-orange-600 pl-4 text-2xl font-bold text-[#2d1b11]">
-                All Recipes
+            <div className="mb-10">
+              <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-3xl font-black text-[#2d1b11] flex items-center gap-3">
+                <span>{currentQuery ? `Results for "${currentQuery}"` : "All Recipes"}</span>
+                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold shadow-sm">
+                  {communityRecipes.length + recipes.length}
+                </span>
               </h2>
-            )}
 
-            {communityRecipes.length > 0 && (
-              <div className="mb-12">
-                <h2 className="mb-6 border-l-4 border-purple-500 pl-4 text-2xl font-bold text-[#2d1b11] flex items-center gap-2">
-                  <span>Community</span> Recipes
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {communityRecipes.map((recipe) => (
-                    <RecipeCard
-                      key={recipe.id}
-                      title={recipe.title}
-                      image={recipe.image}
-                      id={recipe.id}
-                      source={recipe.source}
-                      authorName={recipe.authorName}
-                    />
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {/* 1. Community Recipes (if any) */}
+                {communityRecipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    title={recipe.title}
+                    image={recipe.image}
+                    id={recipe.id}
+                    source={recipe.source}
+                    authorName={recipe.authorName}
+                  />
+                ))}
+                
+                {/* 2. Main Recipes */}
+                {recipes.map((recipe) => (
+                  <RecipeCard 
+                    key={recipe.id} 
+                    title={recipe.title} 
+                    image={recipe.image} 
+                    id={recipe.id} 
+                  />
+                ))}
               </div>
-            )}
-
-            {recipes.length > 0 && (
-              <div>
-                {(communityRecipes.length > 0 || currentQuery) && (
-                  <h2 className="mb-6 border-l-4 border-orange-600 pl-4 text-2xl font-bold text-[#2d1b11]">
-                    {currentQuery ? `Results for "${currentQuery}"` : "More Recipes"}
-                  </h2>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {recipes.map((recipe) => (
-                    <RecipeCard key={recipe.id} title={recipe.title} image={recipe.image} id={recipe.id} />
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </>
         ) : !loading && !error && currentQuery ? (
           <p className="text-center text-gray-500 text-xl py-20">Recipe not found.</p>

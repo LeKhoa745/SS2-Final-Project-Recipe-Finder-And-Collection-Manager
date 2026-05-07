@@ -71,6 +71,9 @@ export default function Navbar() {
           <Link to="/wishlist" className="transition-colors hover:text-orange-600">
             Saved Recipes
           </Link>
+          <Link to="/planner" className="transition-colors hover:text-orange-600">
+            Planner
+          </Link>
         </div>
 
         <div className="flex items-center gap-4">

@@ -12,33 +12,58 @@ export default function Wishlist() {
     const fetchWishlist = async () => {
       try {
         setLoading(true);
-        const data = await wishlistService.getAll();
-        const itemsList = data.data?.items || [];
-        const formattedItems = itemsList.map(item => ({
-          id: item.recipe_id,
-          title: item.recipe_title,
-          image: item.recipe_image
-        }));
-        setWishlistItems(formattedItems);
+        setError(null);
+        
+        // 1. Load from local storage first for immediate display
+        const localSaved = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+        if (localSaved.length > 0) {
+          setWishlistItems(localSaved);
+        }
+
+        // 2. Fetch from backend if logged in
+        if (getAccessToken()) {
+          const data = await wishlistService.getAll();
+          const itemsList = data.data?.items || [];
+          const formattedItems = itemsList.map(item => ({
+            id: item.recipe_id,
+            title: item.recipe_title,
+            image: item.recipe_image
+          }));
+          
+          // Merge local and backend (backend takes priority for canonical state)
+          setWishlistItems(formattedItems);
+          
+          // Update local storage to stay in sync with backend
+          localStorage.setItem("saved_recipes", JSON.stringify(formattedItems));
+        } else if (localSaved.length === 0) {
+          // If not logged in and nothing in local storage
+          setWishlistItems([]);
+        }
       } catch (err) {
         console.error("Failed to fetch wishlist:", err);
-        setError("Please login to view your saved recipes.");
+        // Fallback to local storage if backend fails but we have local data
+        const localSaved = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+        if (localSaved.length > 0) {
+          setWishlistItems(localSaved);
+          setError("Showing offline saved recipes. Please login for full sync.");
+        } else {
+          setError("Please login to view your saved recipes.");
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (getAccessToken()) {
-      fetchWishlist();
-    } else {
-      setLoading(false);
-    }
+    fetchWishlist();
   }, []);
 
   const handleUnsaveAll = async () => {
     if (!window.confirm("Are you sure you want to remove ALL your saved recipes? This cannot be undone.")) return;
     try {
-      await wishlistService.removeAll();
+      if (getAccessToken()) {
+        await wishlistService.removeAll();
+      }
+      localStorage.removeItem("saved_recipes");
       setWishlistItems([]);
     } catch (err) {
       console.error("Failed to remove all items:", err);
@@ -47,7 +72,11 @@ export default function Wishlist() {
   };
 
   const handleItemUnsave = (recipeId) => {
-    setWishlistItems(prev => prev.filter(item => item.id !== recipeId));
+    setWishlistItems(prev => {
+      const updated = prev.filter(item => item.id !== recipeId);
+      localStorage.setItem("saved_recipes", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (

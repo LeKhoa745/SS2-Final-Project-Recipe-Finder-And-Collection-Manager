@@ -5,6 +5,23 @@ import { collectionService } from "../api/collectionService";
 import { wishlistService } from "../api/wishlistService";
 import RecipeCard from "../components/RecipeCard";
 
+function MacroProgress({ label, amount, unit, color, percent }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+        <span className="text-gray-500">{label}</span>
+        <span className="text-[#2d1b11]">{amount}{unit}</span>
+      </div>
+      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${color} transition-all duration-1000`} 
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function RecipeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -246,12 +263,21 @@ export default function RecipeDetail() {
         </h1>
         
         {/* Hero Image */}
-        <div className="w-full h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-sm mb-8 bg-gray-50">
+        <div className="w-full h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-sm mb-8 bg-gray-50 relative">
           <img 
             src={recipe.image || "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&q=80&w=1200"} 
             alt={recipe.title} 
             className="w-full h-full object-cover"
           />
+          {/* Dietary Badges */}
+          <div className="absolute bottom-6 left-6 flex flex-wrap gap-2">
+            {recipe.vegetarian && <span className="bg-green-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Vegetarian</span>}
+            {recipe.vegan && <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Vegan</span>}
+            {recipe.glutenFree && <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Gluten Free</span>}
+            {recipe.dairyFree && <span className="bg-blue-400 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Dairy Free</span>}
+            {recipe.veryHealthy && <span className="bg-rose-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Super Healthy</span>}
+            {recipe.cheap && <span className="bg-gray-800 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md">Budget Friendly</span>}
+          </div>
         </div>
 
         {/* Meta info & Actions bar */}
@@ -265,6 +291,12 @@ export default function RecipeDetail() {
               <span className="text-xl">👥</span> 
               <span>Servings: {recipe.servings} people</span>
             </div>
+            {recipe.healthScore && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⭐</span> 
+                <span>Health Score: {recipe.healthScore}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex gap-4">
@@ -364,21 +396,57 @@ export default function RecipeDetail() {
           </div>
         )}
 
-        {/* Nutrition Section */}
+        {/* Nutrition Section (Advanced) */}
         {recipe.nutrition && recipe.nutrition.nutrients && (
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold text-[#ee5b66] mb-8">Nutrition</h2>
-            <div className="flex flex-wrap gap-4">
-              {primaryNutrients.map((item, idx) => {
-                const nutData = nutrientsMap[item.key];
-                const amount = nutData ? nutData.amount : 0;
-                return (
-                  <div key={idx} className="bg-white border-2 border-pink-100 rounded-xl px-6 py-4 flex flex-col items-center justify-center min-w-[120px] shadow-sm">
-                    <span className="font-bold text-[#2d1b11] text-lg">{amount}{item.unit}</span>
-                    <span className="text-xs text-gray-500 font-medium uppercase mt-1">{item.name}</span>
-                  </div>
-                );
-              })}
+          <div className="mb-16 bg-[#fff8f5] rounded-[2rem] p-8 md:p-10 border border-orange-100">
+            <div className="flex flex-col md:flex-row gap-12 items-center">
+              {/* Calories Circle */}
+              <div className="flex-shrink-0 relative w-40 h-40 flex flex-col items-center justify-center bg-white rounded-full shadow-inner border-4 border-orange-100">
+                <span className="text-4xl font-black text-[#2d1b11]">{Math.round(nutrientsMap["Calories"]?.amount || 0)}</span>
+                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Calories</span>
+                <div className="absolute inset-0 rounded-full border-[6px] border-orange-500 border-t-transparent -rotate-45" />
+              </div>
+
+              {/* Macro Bars */}
+              <div className="flex-1 w-full space-y-6">
+                <h2 className="text-2xl font-black text-[#2d1b11] uppercase tracking-tight mb-4">Macro Breakdown</h2>
+                
+                <div className="space-y-4">
+                  <MacroProgress 
+                    label="Protein" 
+                    amount={nutrientsMap["Protein"]?.amount || 0} 
+                    unit="g" 
+                    color="bg-blue-500" 
+                    percent={Math.min(100, (nutrientsMap["Protein"]?.amount || 0) * 2)} 
+                  />
+                  <MacroProgress 
+                    label="Carbohydrates" 
+                    amount={nutrientsMap["Carbohydrates"]?.amount || 0} 
+                    unit="g" 
+                    color="bg-orange-500" 
+                    percent={Math.min(100, (nutrientsMap["Carbohydrates"]?.amount || 0) * 1.5)} 
+                  />
+                  <MacroProgress 
+                    label="Fat" 
+                    amount={nutrientsMap["Fat"]?.amount || 0} 
+                    unit="g" 
+                    color="bg-rose-500" 
+                    percent={Math.min(100, (nutrientsMap["Fat"]?.amount || 0) * 3)} 
+                  />
+                </div>
+              </div>
+              
+              {/* Other Stats */}
+              <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
+                <div className="bg-white p-4 rounded-2xl border border-orange-50 text-center">
+                  <p className="text-lg font-bold text-[#2d1b11]">{nutrientsMap["Sugar"]?.amount || 0}g</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Sugar</p>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-orange-50 text-center">
+                  <p className="text-lg font-bold text-[#2d1b11]">{nutrientsMap["Fiber"]?.amount || 0}g</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Fiber</p>
+                </div>
+              </div>
             </div>
           </div>
         )}

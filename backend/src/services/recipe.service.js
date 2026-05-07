@@ -2,16 +2,12 @@ import { spoonacularClient, cachedGet } from '../utils/apiClient.js';
 import { MOCK_SEARCH_RESULTS } from '../utils/mockData.js';
 import { logger } from '../utils/logger.js';
 import { UserRecipeModel } from '../models/userRecipe.model.js';
+import { RecipeCacheModel } from '../models/recipeCache.model.js';
 
 const isMockEnabled = () => process.env.MOCK_API === 'true';
-const shouldForceMockRecipes = () => process.env.FORCE_MOCK_RECIPES === 'true';
 
 const isRecipeApiFallbackError = (err) => {
   return err.response?.status === 402 || err.code === 'ECONNREFUSED';
-};
-
-const logRecipeFallback = (err, context) => {
-  logger.warn(`API Fallback triggered for ${context}: ${err.message}`);
 };
 
 const SEARCH_TTL = parseInt(process.env.CACHE_RECIPE_SEARCH_TTL, 10) || 600;
@@ -33,31 +29,20 @@ function buildSearchParams({ query, ingredients, cuisine, diet, type, page, limi
 
 export const RecipeService = {
   async search({ query, ingredients, cuisine, diet, type, page = 1, limit = 12 }) {
-    // Fetch community recipes matching the query (non-blocking)
-    let communityResults = [];
-    try {
-      // If query is empty, we search for 'random' or 'featured' ones by just getting public ones without filters
-      if (query) {
-        communityResults = await UserRecipeModel.searchPublicSimple(query, 6);
-      } else {
-        // Get some 'featured' community recipes
-        const res = await UserRecipeModel.searchPublic('', { page: 1, limit: 6 });
-        communityResults = res.recipes || [];
-      }
+    const params = buildSearchParams({ query, ingredients, cuisine, diet, type, page, limit });
+    const cacheKey = `search:${JSON.stringify(params)}`;
 
-      // Transform community recipes into a card-friendly shape
-      communityResults = communityResults.map(r => ({
-        id: `community-${r.id}`,
-        title: r.title,
-        image: r.imageUrl,
-        readyInMinutes: r.cookTimeMinutes,
-        servings: r.servings,
-        source: 'community',
-        authorName: r.authorName,
-      }));
-    } catch (communityErr) {
-      logger.warn('Community recipe search failed (non-fatal):', communityErr.message);
+    // 1. Try DB Cache first
+    const cachedData = await RecipeCacheModel.get(cacheKey);
+    if (cachedData) {
+      logger.info(`DB Cache HIT: ${cacheKey}`);
+      // Still fetch community recipes to merge
+      const communityResults = await this.getCommunityRecipes(query);
+      return { ...cachedData, communityResults, source: 'cache' };
     }
+
+    // Fetch community recipes (non-blocking)
+    const communityResults = await this.getCommunityRecipes(query);
 
     try {
       if (isMockEnabled()) {
@@ -77,10 +62,10 @@ export const RecipeService = {
         };
       }
 
-      const params = buildSearchParams({ query, ingredients, cuisine, diet, type, page, limit });
+      // 2. Fetch from API
       const data = await cachedGet(spoonacularClient, '/recipes/complexSearch', params, SEARCH_TTL);
 
-      return {
+      const result = {
         results:     data.results,
         totalResults: data.totalResults,
         communityResults,
@@ -89,9 +74,30 @@ export const RecipeService = {
         totalPages: Math.max(1, Math.ceil((data.totalResults || 0) / limit)),
         source: 'live',
       };
+
+      // 3. Save to DB Cache for future use
+      await RecipeCacheModel.set(cacheKey, result, 'search');
+
+      return result;
     } catch (err) {
       if (err.response?.status === 402) {
-        logger.warn('Spoonacular API limit reached (402). Falling back to Mock Data.');
+        logger.warn('Spoonacular API limit reached (402). Falling back to DB Cache or Mock Data.');
+        
+        // 4. Fallback to DB search (best effort)
+        const dbFallback = await RecipeCacheModel.searchCached(query || '', limit);
+        if (dbFallback.length > 0) {
+          return {
+            results: dbFallback,
+            totalResults: dbFallback.length,
+            communityResults,
+            page,
+            limit,
+            totalPages: 1,
+            source: 'db-fallback'
+          };
+        }
+
+        // Final fallback to mock
         let filteredResults = MOCK_SEARCH_RESULTS;
         if (query) {
           const q = query.toLowerCase();
@@ -104,14 +110,43 @@ export const RecipeService = {
           page,
           limit,
           totalPages: 1,
+          source: 'mock-fallback'
         };
       }
       throw err;
     }
   },
 
+  async getCommunityRecipes(query) {
+    try {
+      let communityResults = [];
+      if (query) {
+        communityResults = await UserRecipeModel.searchPublicSimple(query, 6);
+      } else {
+        const res = await UserRecipeModel.searchPublic('', { page: 1, limit: 6 });
+        communityResults = res.recipes || [];
+      }
+
+      return communityResults.map(r => ({
+        id: `community-${r.id}`,
+        title: r.title,
+        image: r.imageUrl,
+        readyInMinutes: r.cookTimeMinutes,
+        servings: r.servings,
+        source: 'community',
+        authorName: r.authorName,
+      }));
+    } catch (err) {
+      logger.warn('Community recipe search failed:', err.message);
+      return [];
+    }
+  },
+
   async getById(id) {
-    // Detail logic...
+    const cacheKey = `detail:${id}`;
+    const cachedData = await RecipeCacheModel.get(cacheKey);
+    if (cachedData) return { ...cachedData, source: 'cache' };
+
     try {
       const recipe = await cachedGet(
         spoonacularClient,
@@ -120,7 +155,11 @@ export const RecipeService = {
         DETAIL_TTL
       );
 
-      return recipe ? { ...recipe, source: 'live' } : null;
+      if (recipe) {
+        await RecipeCacheModel.set(cacheKey, recipe, 'detail');
+        return { ...recipe, source: 'live' };
+      }
+      return null;
     } catch (error) {
       if (!isRecipeApiFallbackError(error)) throw error;
       return null;
@@ -128,6 +167,10 @@ export const RecipeService = {
   },
 
   async getSimilar(id) {
+    const cacheKey = `similar:${id}`;
+    const cachedData = await RecipeCacheModel.get(cacheKey);
+    if (cachedData) return cachedData;
+
     try {
       const recipes = await cachedGet(
         spoonacularClient,
@@ -136,9 +179,12 @@ export const RecipeService = {
         DETAIL_TTL
       );
 
-      return Array.isArray(recipes)
-        ? recipes.map((recipe) => ({ ...recipe, source: 'live' }))
-        : [];
+      if (Array.isArray(recipes)) {
+        const formatted = recipes.map((recipe) => ({ ...recipe, source: 'live' }));
+        await RecipeCacheModel.set(cacheKey, formatted, 'similar');
+        return formatted;
+      }
+      return [];
     } catch (error) {
       if (!isRecipeApiFallbackError(error)) throw error;
       return [];

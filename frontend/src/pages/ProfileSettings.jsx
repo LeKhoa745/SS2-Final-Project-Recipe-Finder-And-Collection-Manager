@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/apiClient";
 import { getStoredUser, updateStoredUser } from "../utils/session";
 
@@ -16,6 +16,17 @@ const sideLinks = [
   { icon: "bookmark", label: "Saved Recipes", href: "/wishlist" },
   { icon: "settings", label: "Profile Settings", href: "/settings", active: true },
 ];
+
+function RequirementItem({ met, label }) {
+  return (
+    <div className={`flex items-center gap-2 transition-all duration-300 ${met ? "text-green-600" : "text-stone-400"}`}>
+      <span className={`material-symbols-outlined text-[18px] transition-transform ${met ? "scale-110" : "scale-100"}`}>
+        {met ? "check_circle" : "radio_button_unchecked"}
+      </span>
+      <span className="text-[11px] font-medium leading-tight">{label}</span>
+    </div>
+  );
+}
 
 function getPhoneDigits(phone) {
   if (!phone) return "";
@@ -34,6 +45,7 @@ function getAvatarFallback(name = "Chef") {
 }
 
 export default function ProfileSettings() {
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [user, setUser] = useState(getStoredUser());
   const [formData, setFormData] = useState({
@@ -167,16 +179,18 @@ export default function ProfileSettings() {
 
     // Validate password if user is trying to change it
     if (passwordData.newPassword) {
-      if (passwordData.newPassword.length < 8) {
-        setError("New password must be at least 8 characters.");
+      const isLengthMet = passwordData.newPassword.length >= 8;
+      const isUpperMet = /[A-Z]/.test(passwordData.newPassword);
+      const isNumberMet = /[0-9]/.test(passwordData.newPassword);
+      const isSpecialMet = /[!@#$%^&*]/.test(passwordData.newPassword);
+      const isMatchMet = passwordData.newPassword === passwordData.confirmPassword;
+
+      if (!isLengthMet || !isUpperMet || !isNumberMet || !isSpecialMet || !isMatchMet) {
+        setError("Please meet all password requirements.");
         setSaving(false);
         return;
       }
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setError("New passwords do not match.");
-        setSaving(false);
-        return;
-      }
+      
       if (user?.hasPassword && !passwordData.oldPassword) {
         setError("Current password is required to set a new one.");
         setSaving(false);
@@ -558,11 +572,36 @@ export default function ProfileSettings() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex justify-end">
-                    <Link to="/forgot-password" size="sm" className="text-sm font-bold text-orange-600 hover:underline flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">lock_reset</span>
-                      Forgot password or want to reset via phone?
-                    </Link>
+
+                  {/* Password Requirements Checklist */}
+                  {passwordData.newPassword && (
+                    <div className="mt-4 p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-stone-500 mb-2">Password Requirements</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                        <RequirementItem met={passwordData.newPassword.length >= 8} label="At least 8 characters" />
+                        <RequirementItem met={/[A-Z]/.test(passwordData.newPassword)} label="Contains uppercase (A-Z)" />
+                        <RequirementItem met={/[0-9]/.test(passwordData.newPassword)} label="Contains number (0-9)" />
+                        <RequirementItem met={/[!@#$%^&*]/.test(passwordData.newPassword)} label="Contains special character" />
+                        <RequirementItem met={passwordData.newPassword === passwordData.confirmPassword && passwordData.newPassword.length > 0} label="Passwords match" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-8 pt-6 border-t border-stone-100">
+                    <h3 className="mb-4 font-headline text-lg font-bold text-[#37331e] flex items-center gap-2">
+                      <span className="material-symbols-outlined text-orange-600">security</span>
+                      Account Recovery
+                    </h3>
+                    <p className="mb-6 text-sm text-[#655f47]">
+                      Forgotten your password or want to set a new one using your email? You can request a reset link anytime.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/forgot-password")}
+                      className="inline-flex items-center gap-2 rounded-xl border-2 border-orange-100 px-6 py-3 font-headline text-sm font-bold text-orange-600 transition-all hover:bg-orange-50 hover:border-orange-200 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-lg">lock_reset</span>
+                      Send Reset Link to Email
+                    </button>
                   </div>
                 </div>
 

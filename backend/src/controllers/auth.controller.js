@@ -158,7 +158,7 @@ export const AuthController = {
   async forgotPassword(req, res, next) {
     try {
       const result = await AuthService.forgotPassword(req.body.email);
-      sendSuccess(res, { email: req.body.email, ...result }, 'Email found. Please confirm your phone number.');
+      sendSuccess(res, result, 'Reset link sent to your email. Please check your inbox.');
     } catch (err) { next(err); }
   },
 
