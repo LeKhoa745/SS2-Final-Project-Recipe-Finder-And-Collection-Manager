@@ -15,6 +15,8 @@ import RecipeDetail from "./pages/RecipeDetail";
 import Collection from "./pages/Collection";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Planner from "./pages/Planner";
+import ChatWidget from "./components/ChatWidget";
 
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
@@ -44,6 +46,7 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/planner" element={<Planner />} />
 
         <Route path="/settings" element={<ProfileSettings />} />
 
@@ -56,6 +59,7 @@ function AppLayout() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
       </Routes>
+      <ChatWidget />
     </>
   );
 }

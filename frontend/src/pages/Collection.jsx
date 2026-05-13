@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { collectionService } from "../api/collectionService";
 import { getAccessToken, getStoredUser } from "../utils/session";
 
@@ -19,11 +19,13 @@ const emptyRecipe = () => ({
 /* ───────────── Component ───────────── */
 export default function Collection() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = getStoredUser();
   const isLoggedIn = !!getAccessToken();
 
   /* state */
-  const [tab, setTab] = useState("my");           // "my" | "create"
+  const urlTab = searchParams.get("tab");
+  const [tab, setTab] = useState(urlTab === "create" ? "create" : "my");
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -32,6 +34,15 @@ export default function Collection() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyRecipe());
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Sync state with URL when tab changes
+  useEffect(() => {
+    if (tab === "create") {
+      setSearchParams({ tab: "create" }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  }, [tab, setSearchParams]);
 
   /* ── fetch my recipes ───────────── */
   useEffect(() => {
@@ -155,7 +166,14 @@ export default function Collection() {
   };
 
   /* ── not logged in ──────────────── */
-  if (loading) {
+  // Transient loading to handle session restoration on reload
+  const [init, setInit] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setInit(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading || !init) {
     return (
       <div className="min-h-screen bg-[#fff8f5] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-orange-200 border-t-orange-600"></div>

@@ -82,27 +82,20 @@ router.post('/verify-reset-identity',
   ],
   handleValidationErrors,
   AuthController.verifyResetIdentity
+);
 
 router.post('/verify-reset-phone',
   [
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    body('phone')
-      .trim()
-      .matches(/^\+84\d{9}$/)
-      .withMessage('Phone number must use +84 and contain exactly 9 digits after it')
+    body('token').notEmpty().withMessage('Token is required'),
+    body('phone').notEmpty().withMessage('Phone number is required')
   ],
   handleValidationErrors,
   AuthController.verifyResetPhone
-
 );
 
 router.post('/reset-password',
   [
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    body('phone')
-      .trim()
-      .matches(/^\+84\d{9}$/)
-      .withMessage('Phone number must use +84 and contain exactly 9 digits after it'),
+    body('token').notEmpty().withMessage('Token is required'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
   ],
   handleValidationErrors,

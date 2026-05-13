@@ -192,3 +192,12 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_token (token)
 ) ENGINE=InnoDB;
+-- ─── Recipe API Cache ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS recipe_cache (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    cache_key  VARCHAR(255)  NOT NULL UNIQUE,
+    data       LONGTEXT      NOT NULL,
+    type       ENUM('search', 'detail', 'similar', 'ingredients') NOT NULL,
+    created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_cache_key (cache_key)
+) ENGINE=InnoDB;

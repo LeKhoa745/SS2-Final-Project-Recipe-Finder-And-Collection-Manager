@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { UserModel } from '../models/user.model.js';
 import { AppError, UnauthorizedError } from '../utils/errors.js';
 import { sendEmail } from '../utils/email.util.js';
@@ -110,12 +111,17 @@ export const AuthService = {
   },
 
   async forgotPassword(email) {
-    const user = await getPasswordResetUser(email);
+    const user = await UserModel.findByEmail(email);
+    if (!user) throw new AppError('Invalid email, Try again!', 404);
 
-    return {
-      phoneHint: user.phone,
-    };
-  },
+    if (!user.password_hash) {
+      throw new AppError('This account was created via Google. Please use Google Login.', 400);
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+    await UserModel.saveResetToken(user.id, token, expiresAt);
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
@@ -125,7 +131,7 @@ export const AuthService = {
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #ea580c;">Recipe Finder</h2>
-          <p>Hi ${user.name},</p>
+          <p>Hi ${user.name || 'Chef'},</p>
           <p>You requested a password reset. Please click the button below to set a new password. This link will expire in 1 hour.</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
@@ -136,9 +142,16 @@ export const AuthService = {
         </div>
       `,
     });
-  async verifyResetPhone(email, phone) {
-    const user = await getPasswordResetUser(email);
-    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
+
+    return { success: true };
+  },
+
+  async verifyResetPhone(token, phone) {
+    const resetToken = await UserModel.findResetToken(token);
+    if (!resetToken) throw new AppError('Invalid or expired reset token', 400);
+
+    const user = await UserModel.findById(resetToken.user_id);
+    if (!user || normalizePhone(user.phone) !== normalizePhone(phone)) {
       throw new AppError('Phone number does not match our records.', 400);
     }
 
@@ -165,20 +178,22 @@ export const AuthService = {
     const expiresAt = new Date(Date.now() + 1800000); // 30 minutes
     await UserModel.saveResetToken(user.id, token, expiresAt);
 
-    return { token };
+    // Return token and phone hint
+    const phone = user.phone || "";
+    const phoneHint = phone.length > 3 
+      ? "*".repeat(phone.length - 3) + phone.slice(-3)
+      : phone;
+
+    return { token, phoneHint };
   },
 
   async resetPassword(token, newPassword) {
-    const resetRequest = await UserModel.findResetToken(token);
-    if (!resetRequest) throw new AppError('Invalid or expired reset token', 400);
-  async resetPassword(email, phone, newPassword) {
-    const user = await getPasswordResetUser(email);
-    if (normalizePhone(user.phone) !== normalizePhone(phone)) {
-      throw new AppError('Phone number does not match our records.', 400);
-    }
+    const resetToken = await UserModel.findResetToken(token);
+    if (!resetToken) throw new AppError('Invalid or expired reset token', 400);
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await UserModel.updatePassword(user.id, passwordHash);
+    await UserModel.updatePassword(resetToken.user_id, passwordHash);
+    await UserModel.deleteResetToken(token);
 
     return true;
   },
