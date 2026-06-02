@@ -39,3 +39,30 @@ export async function apiClient(endpoint, options = {}) {
 
   return data;
 }
+
+apiClient.get = (endpoint, options = {}) => 
+  apiClient(endpoint, { ...options, method: 'GET' });
+
+apiClient.post = (endpoint, body, options = {}) => 
+  apiClient(endpoint, { 
+    ...options, 
+    method: 'POST', 
+    body: typeof body === 'string' ? body : JSON.stringify(body) 
+  });
+
+apiClient.put = (endpoint, body, options = {}) => 
+  apiClient(endpoint, { 
+    ...options, 
+    method: 'PUT', 
+    body: typeof body === 'string' ? body : JSON.stringify(body) 
+  });
+
+apiClient.patch = (endpoint, body, options = {}) => 
+  apiClient(endpoint, { 
+    ...options, 
+    method: 'PATCH', 
+    body: typeof body === 'string' ? body : JSON.stringify(body) 
+  });
+
+apiClient.delete = (endpoint, options = {}) => 
+  apiClient(endpoint, { ...options, method: 'DELETE' });

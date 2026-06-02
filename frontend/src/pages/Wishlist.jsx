@@ -73,7 +73,7 @@ export default function Wishlist() {
 
   const handleItemUnsave = (recipeId) => {
     setWishlistItems(prev => {
-      const updated = prev.filter(item => item.id !== recipeId);
+      const updated = prev.filter(item => String(item.id) !== String(recipeId));
       localStorage.setItem("saved_recipes", JSON.stringify(updated));
       return updated;
     });

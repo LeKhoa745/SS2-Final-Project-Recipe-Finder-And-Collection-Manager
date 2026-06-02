@@ -125,23 +125,42 @@ export const AuthService = {
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
-    await sendEmail({
-      to: user.email,
-      subject: 'Password Reset Request - Recipe Finder',
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #ea580c;">Recipe Finder</h2>
-          <p>Hi ${user.name || 'Chef'},</p>
-          <p>You requested a password reset. Please click the button below to set a new password. This link will expire in 1 hour.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request - Recipe Finder',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #ea580c;">Recipe Finder</h2>
+            <p>Hi ${user.name || 'Chef'},</p>
+            <p>You requested a password reset. Please click the button below to set a new password. This link will expire in 1 hour.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+            </div>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #666;">If the button above doesn't work, copy and paste this link: <br/> ${resetUrl}</p>
           </div>
-          <p>If you didn't request this, you can safely ignore this email.</p>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #666;">If the button above doesn't work, copy and paste this link: <br/> ${resetUrl}</p>
-        </div>
-      `,
-    });
+        `,
+      });
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      
+      // If we are in development, warn in console, print the reset URL, and return success
+      const isDev = process.env.NODE_ENV === 'development';
+      const isPlaceholderSmtp = process.env.SMTP_USER?.includes('your-email');
+      
+      if (isDev || isPlaceholderSmtp) {
+        console.warn('\n======================================================');
+        console.warn('DEVELOPMENT WARNING: SMTP credentials are not configured.');
+        console.warn('Password reset token generated successfully.');
+        console.warn('Reset URL is:', resetUrl);
+        console.warn('======================================================\n');
+        return { success: true, devResetUrl: resetUrl };
+      }
+      
+      throw new AppError('Could not send reset email. Please contact support or try again later.', 500);
+    }
 
     return { success: true };
   },
