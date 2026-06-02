@@ -1,15 +1,21 @@
-import pool from '../config/db.js';
+import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
+
+const recipeCacheSchema = new mongoose.Schema({
+  cache_key: { type: String, required: true, unique: true },
+  data: { type: mongoose.Schema.Types.Mixed, required: true },
+  type: { type: String, enum: ['search', 'detail', 'similar', 'ingredients'], required: true },
+  created_at: { type: Date, default: Date.now }
+});
+
+const RecipeCache = mongoose.model('RecipeCache', recipeCacheSchema);
 
 export const RecipeCacheModel = {
   async get(key) {
     try {
-      const [rows] = await pool.execute(
-        'SELECT data FROM recipe_cache WHERE cache_key = ? LIMIT 1',
-        [key]
-      );
-      if (rows.length === 0) return null;
-      return JSON.parse(rows[0].data);
+      const row = await RecipeCache.findOne({ cache_key: key }).lean();
+      if (!row) return null;
+      return row.data;
     } catch (err) {
       logger.error('Error getting recipe cache:', err);
       return null;
@@ -18,10 +24,10 @@ export const RecipeCacheModel = {
 
   async set(key, data, type) {
     try {
-      const jsonData = JSON.stringify(data);
-      await pool.execute(
-        'INSERT INTO recipe_cache (cache_key, data, type) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE data = ?, type = ?',
-        [key, jsonData, type, jsonData, type]
+      await RecipeCache.findOneAndUpdate(
+        { cache_key: key },
+        { data, type, created_at: new Date() },
+        { upsert: true, new: true }
       );
       return true;
     } catch (err) {
@@ -32,15 +38,16 @@ export const RecipeCacheModel = {
 
   async searchCached(query, limit = 12) {
     try {
-      // Very simple search on cached results
-      // We look for keys that were 'search' type and contain the query in the data
-      // This is a "best effort" fallback
-      const [rows] = await pool.execute(
-        "SELECT data FROM recipe_cache WHERE type = 'detail' AND data LIKE ? LIMIT ?",
-        [`%${query}%`, limit]
-      );
+      // Basic fallback search
+      const rows = await RecipeCache.find({
+        type: 'detail',
+        $or: [
+          { 'data.title': { $regex: query, $options: 'i' } },
+          { 'data.summary': { $regex: query, $options: 'i' } }
+        ]
+      }).limit(limit).lean();
       
-      return rows.map(r => JSON.parse(r.data));
+      return rows.map(r => r.data);
     } catch (err) {
       logger.error('Error searching recipe cache:', err);
       return [];

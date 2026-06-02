@@ -1,132 +1,143 @@
-import pool from '../config/db.js';
+import mongoose from 'mongoose';
+
+const userRecipeSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true },
+  description: { type: String },
+  image_url: { type: String },
+  ingredients: { type: mongoose.Schema.Types.Mixed, required: true }, // Array of {name, amount, unit}
+  instructions: { type: mongoose.Schema.Types.Mixed, required: true }, // Array of strings
+  cuisine: { type: String },
+  cook_time_minutes: { type: Number },
+  servings: { type: Number, default: 2 },
+  is_public: { type: Boolean, default: true },
+  author_name: { type: String }, // Denormalized for search
+  author_avatar: { type: String },
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now }
+}, {
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+});
+
+// Full-text index for search
+userRecipeSchema.index({ title: 'text', description: 'text' });
+
+const deletedUserRecipeSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  original_recipe_id: { type: mongoose.Schema.Types.ObjectId, required: true },
+  title: { type: String, required: true },
+  deleted_at: { type: Date, default: Date.now }
+});
+
+const UserRecipe = mongoose.model('UserRecipe', userRecipeSchema);
+const DeletedUserRecipe = mongoose.model('DeletedUserRecipe', deletedUserRecipeSchema);
 
 export const UserRecipeModel = {
-  /**
-   * Create a new user recipe.
-   */
   async create(userId, data) {
     const {
       title, description, imageUrl, ingredients, instructions,
       cuisine, cookTimeMinutes, servings, isPublic = true,
     } = data;
 
-    const [result] = await pool.query(
-      `INSERT INTO user_recipes
-         (user_id, title, description, image_url, ingredients, instructions,
-          cuisine, cook_time_minutes, servings, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId, title, description || null, imageUrl || null,
-        JSON.stringify(ingredients), JSON.stringify(instructions),
-        cuisine || null, cookTimeMinutes || null, servings || 2,
-        isPublic ? 1 : 0,
-      ]
-    );
-    return this.findById(result.insertId);
+    // Get user info for denormalization
+    const User = mongoose.model('User');
+    const user = await User.findById(userId);
+
+    const recipe = new UserRecipe({
+      user_id: userId,
+      title,
+      description,
+      image_url: imageUrl,
+      ingredients,
+      instructions,
+      cuisine,
+      cook_time_minutes: cookTimeMinutes,
+      servings,
+      is_public: isPublic,
+      author_name: user?.name,
+      author_avatar: user?.avatar
+    });
+
+    await recipe.save();
+    return this.findById(recipe._id);
   },
 
-  /**
-   * Update an existing recipe (only if owned by userId).
-   */
   async update(id, userId, data) {
     const {
       title, description, imageUrl, ingredients, instructions,
       cuisine, cookTimeMinutes, servings, isPublic,
     } = data;
 
-    await pool.query(
-      `UPDATE user_recipes SET
-         title = ?, description = ?, image_url = ?, ingredients = ?, instructions = ?,
-         cuisine = ?, cook_time_minutes = ?, servings = ?, is_public = ?
-       WHERE id = ? AND user_id = ?`,
-      [
-        title, description || null, imageUrl || null,
-        JSON.stringify(ingredients), JSON.stringify(instructions),
-        cuisine || null, cookTimeMinutes || null, servings || 2,
-        isPublic ? 1 : 0,
-        id, userId,
-      ]
+    const update = {
+      title,
+      description,
+      image_url: imageUrl,
+      ingredients,
+      instructions,
+      cuisine,
+      cook_time_minutes: cookTimeMinutes,
+      servings,
+      is_public: isPublic,
+    };
+
+    const recipe = await UserRecipe.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      update,
+      { new: true }
     );
-    return this.findById(id);
+
+    return recipe ? this.findById(recipe._id) : null;
   },
 
-  /**
-   * Delete a recipe (only if owned by userId).
-   */
   async delete(id, userId) {
-    // 1. Copy to deleted_user_recipes
-    await pool.query(
-      `INSERT INTO deleted_user_recipes (user_id, original_recipe_id, title)
-       SELECT user_id, id, title 
-       FROM user_recipes 
-       WHERE id = ? AND user_id = ?`,
-      [id, userId]
-    );
+    const recipe = await UserRecipe.findOne({ _id: id, user_id: userId });
+    if (!recipe) return false;
 
-    // 2. Remove
-    const [result] = await pool.query(
-      'DELETE FROM user_recipes WHERE id = ? AND user_id = ?',
-      [id, userId]
-    );
-    return result.affectedRows > 0;
+    await DeletedUserRecipe.create({
+      user_id: userId,
+      original_recipe_id: id,
+      title: recipe.title
+    });
+
+    const result = await UserRecipe.deleteOne({ _id: id, user_id: userId });
+    return result.deletedCount > 0;
   },
 
-  /**
-   * Delete all recipes owned by userId.
-   */
   async deleteAll(userId) {
-    // 1. Copy all to deleted_user_recipes
-    await pool.query(
-      `INSERT INTO deleted_user_recipes (user_id, original_recipe_id, title)
-       SELECT user_id, id, title 
-       FROM user_recipes 
-       WHERE user_id = ?`,
-      [userId]
-    );
+    const recipes = await UserRecipe.find({ user_id: userId });
+    if (recipes.length === 0) return false;
 
-    // 2. Remove all
-    const [result] = await pool.query(
-      'DELETE FROM user_recipes WHERE user_id = ?',
-      [userId]
-    );
-    return result.affectedRows > 0;
+    const deletedRecords = recipes.map(r => ({
+      user_id: userId,
+      original_recipe_id: r._id,
+      title: r.title
+    }));
+
+    await DeletedUserRecipe.insertMany(deletedRecords);
+    const result = await UserRecipe.deleteMany({ user_id: userId });
+    return result.deletedCount > 0;
   },
 
-  /**
-   * Find a single recipe by ID, joining with user name.
-   */
   async findById(id) {
-    const [rows] = await pool.query(
-      `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar
-       FROM user_recipes r
-       JOIN users u ON u.id = r.user_id
-       WHERE r.id = ?`,
-      [id]
-    );
-    if (!rows[0]) return null;
-    return this._format(rows[0]);
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    const recipe = await UserRecipe.findById(id).populate('user_id', 'name avatar').lean();
+    if (!recipe) return null;
+    return this._format(recipe);
   },
 
-  /**
-   * List recipes by a specific user (owner view — includes private).
-   */
   async findByUser(userId, { page = 1, limit = 12 } = {}) {
-    const offset = (page - 1) * limit;
-    const [rows] = await pool.query(
-      `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar
-       FROM user_recipes r
-       JOIN users u ON u.id = r.user_id
-       WHERE r.user_id = ?
-       ORDER BY r.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [userId, limit, offset]
-    );
-    const [[{ total }]] = await pool.query(
-      'SELECT COUNT(*) as total FROM user_recipes WHERE user_id = ?',
-      [userId]
-    );
+    const skip = (page - 1) * limit;
+    const recipes = await UserRecipe.find({ user_id: userId })
+      .populate('user_id', 'name avatar')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await UserRecipe.countDocuments({ user_id: userId });
+
     return {
-      recipes: rows.map(this._format),
+      recipes: recipes.map(this._format),
       total,
       page,
       limit,
@@ -134,43 +145,30 @@ export const UserRecipeModel = {
     };
   },
 
-  /**
-   * Full-text search across public user recipes.
-   */
   async searchPublic(query, { page = 1, limit = 12 } = {}) {
-    const offset = (page - 1) * limit;
-
-    let where = 'r.is_public = 1';
-    const params = [];
+    const skip = (page - 1) * limit;
+    let filter = { is_public: true };
 
     if (query && query.trim()) {
-      where += ' AND (MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE) OR u.name LIKE ?)';
-      // Append wildcard so partial words match
-      const searchTerm = query.trim().split(/\s+/).map(w => `+${w}*`).join(' ');
-      const likeTerm = `%${query.trim()}%`;
-      params.push(searchTerm, likeTerm);
+      const q = query.trim();
+      filter.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { author_name: { $regex: q, $options: 'i' } }
+      ];
     }
 
-    const [rows] = await pool.query(
-      `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar
-       FROM user_recipes r
-       JOIN users u ON u.id = r.user_id
-       WHERE ${where}
-       ORDER BY r.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
-    );
+    const recipes = await UserRecipe.find(filter)
+      .populate('user_id', 'name avatar')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    const countParams = query && query.trim()
-      ? [query.trim().split(/\s+/).map(w => `+${w}*`).join(' '), `%${query.trim()}%`]
-      : [];
-    const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) as total FROM user_recipes r JOIN users u ON u.id = r.user_id WHERE ${where}`,
-      countParams
-    );
+    const total = await UserRecipe.countDocuments(filter);
 
     return {
-      recipes: rows.map(this._format),
+      recipes: recipes.map(this._format),
       total,
       page,
       limit,
@@ -178,44 +176,41 @@ export const UserRecipeModel = {
     };
   },
 
-  /**
-   * Quick LIKE-based search used for merging into Spoonacular results.
-   */
   async searchPublicSimple(query, limit = 6) {
     if (!query || !query.trim()) return [];
-    const like = `%${query.trim()}%`;
-    const [rows] = await pool.query(
-      `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar
-       FROM user_recipes r
-       JOIN users u ON u.id = r.user_id
-       WHERE r.is_public = 1 AND (r.title LIKE ? OR r.description LIKE ? OR u.name LIKE ?)
-       ORDER BY r.created_at DESC
-       LIMIT ?`,
-      [like, like, like, limit]
-    );
-    return rows.map(this._format);
+    const recipes = await UserRecipe.find({
+      is_public: true,
+      $or: [
+        { title: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+        { author_name: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .populate('user_id', 'name avatar')
+    .sort({ created_at: -1 })
+    .limit(limit)
+    .lean();
+
+    return recipes.map(this._format);
   },
 
-  /**
-   * Normalise a database row into a clean object.
-   */
-  _format(row) {
+  _format(doc) {
     return {
-      id: row.id,
-      userId: row.user_id,
-      title: row.title,
-      description: row.description,
-      imageUrl: row.image_url,
-      ingredients: typeof row.ingredients === 'string' ? JSON.parse(row.ingredients) : row.ingredients,
-      instructions: typeof row.instructions === 'string' ? JSON.parse(row.instructions) : row.instructions,
-      cuisine: row.cuisine,
-      cookTimeMinutes: row.cook_time_minutes,
-      servings: row.servings,
-      isPublic: !!row.is_public,
-      authorName: row.author_name,
-      authorAvatar: row.author_avatar,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      id: doc._id.toString(),
+      userId: doc.user_id._id || doc.user_id,
+      title: doc.title,
+      description: doc.description,
+      imageUrl: doc.image_url,
+      ingredients: doc.ingredients,
+      instructions: doc.instructions,
+      cuisine: doc.cuisine,
+      cookTimeMinutes: doc.cook_time_minutes,
+      servings: doc.servings,
+      isPublic: !!doc.is_public,
+      authorName: doc.author_name || (doc.user_id && doc.user_id.name),
+      authorAvatar: doc.author_avatar || (doc.user_id && doc.user_id.avatar),
+      createdAt: doc.created_at,
+      updatedAt: doc.updated_at,
       source: 'community',
     };
   },

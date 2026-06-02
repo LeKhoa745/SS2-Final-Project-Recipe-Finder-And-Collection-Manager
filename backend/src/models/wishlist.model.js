@@ -1,73 +1,95 @@
-import pool from '../config/db.js';
+import mongoose from 'mongoose';
+
+const wishlistItemSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  recipe_id: { type: String, required: true },
+  recipe_title: { type: String, required: true },
+  recipe_image: { type: String },
+  ready_in_min: { type: Number },
+  servings: { type: Number },
+  source_url: { type: String },
+  saved_at: { type: Date, default: Date.now }
+});
+
+// Unique index for user_id + recipe_id
+wishlistItemSchema.index({ user_id: 1, recipe_id: 1 }, { unique: true });
+
+const deletedWishlistItemSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  recipe_id: { type: String, required: true },
+  recipe_title: { type: String, required: true },
+  recipe_image: { type: String },
+  deleted_at: { type: Date, default: Date.now }
+});
+
+const WishlistItem = mongoose.model('WishlistItem', wishlistItemSchema);
+const DeletedWishlistItem = mongoose.model('DeletedWishlistItem', deletedWishlistItemSchema);
 
 export const WishlistModel = {
   async findByUser(userId) {
-    const [rows] = await pool.query(
-      'SELECT * FROM wishlist_items WHERE user_id = ? ORDER BY saved_at DESC',
-      [userId]
-    );
-    return rows;
+    const items = await WishlistItem.find({ user_id: userId }).sort({ saved_at: -1 }).lean();
+    return items.map(i => ({ ...i, id: i._id.toString() }));
   },
 
   async findOne(userId, recipeId) {
-    const [rows] = await pool.query(
-      'SELECT * FROM wishlist_items WHERE user_id = ? AND recipe_id = ?',
-      [userId, recipeId]
-    );
-    return rows[0] || null;
+    const item = await WishlistItem.findOne({ user_id: userId, recipe_id: recipeId }).lean();
+    if (item) item.id = item._id.toString();
+    return item;
   },
 
   async add(userId, recipe) {
     const { recipeId, recipeTitle, recipeImage, readyInMinutes, servings, sourceUrl } = recipe;
-    const [result] = await pool.query(
-      `INSERT INTO wishlist_items (user_id, recipe_id, recipe_title, recipe_image, ready_in_min, servings, source_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, recipeId, recipeTitle, recipeImage, readyInMinutes, servings, sourceUrl]
-    );
+    
+    // Check if already exists to avoid unique constraint error
+    const existing = await this.findOne(userId, recipeId);
+    if (existing) return existing;
+
+    const item = new WishlistItem({
+      user_id: userId,
+      recipe_id: recipeId,
+      recipe_title: recipeTitle,
+      recipe_image: recipeImage,
+      ready_in_min: readyInMinutes,
+      servings: servings,
+      source_url: sourceUrl
+    });
+
+    await item.save();
     return this.findOne(userId, recipeId);
   },
 
   async remove(userId, recipeId) {
-    // 1. Copy to deleted_wishlist_items
-    await pool.query(
-      `INSERT INTO deleted_wishlist_items (user_id, recipe_id, recipe_title, recipe_image)
-       SELECT user_id, recipe_id, recipe_title, recipe_image 
-       FROM wishlist_items 
-       WHERE user_id = ? AND recipe_id = ?`,
-      [userId, recipeId]
-    );
+    const item = await WishlistItem.findOne({ user_id: userId, recipe_id: recipeId });
+    if (!item) return false;
 
-    // 2. Remove
-    const [result] = await pool.query(
-      'DELETE FROM wishlist_items WHERE user_id = ? AND recipe_id = ?',
-      [userId, recipeId]
-    );
-    return result.affectedRows > 0;
+    await DeletedWishlistItem.create({
+      user_id: userId,
+      recipe_id: recipeId,
+      recipe_title: item.recipe_title,
+      recipe_image: item.recipe_image
+    });
+
+    const result = await WishlistItem.deleteOne({ user_id: userId, recipe_id: recipeId });
+    return result.deletedCount > 0;
   },
 
   async removeAll(userId) {
-    // 1. Copy all to deleted_wishlist_items
-    await pool.query(
-      `INSERT INTO deleted_wishlist_items (user_id, recipe_id, recipe_title, recipe_image)
-       SELECT user_id, recipe_id, recipe_title, recipe_image 
-       FROM wishlist_items 
-       WHERE user_id = ?`,
-      [userId]
-    );
+    const items = await WishlistItem.find({ user_id: userId });
+    if (items.length === 0) return false;
 
-    // 2. Remove all
-    const [result] = await pool.query(
-      'DELETE FROM wishlist_items WHERE user_id = ?',
-      [userId]
-    );
-    return result.affectedRows > 0;
+    const deletedItems = items.map(i => ({
+      user_id: userId,
+      recipe_id: i.recipe_id,
+      recipe_title: i.recipe_title,
+      recipe_image: i.recipe_image
+    }));
+
+    await DeletedWishlistItem.insertMany(deletedItems);
+    const result = await WishlistItem.deleteMany({ user_id: userId });
+    return result.deletedCount > 0;
   },
 
   async count(userId) {
-    const [[row]] = await pool.query(
-      'SELECT COUNT(*) as total FROM wishlist_items WHERE user_id = ?',
-      [userId]
-    );
-    return row.total;
+    return await WishlistItem.countDocuments({ user_id: userId });
   },
 };
