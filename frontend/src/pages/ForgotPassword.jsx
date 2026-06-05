@@ -5,6 +5,7 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [devLink, setDevLink] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -12,6 +13,7 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
+    setDevLink("");
     setError("");
     
     if (!email) return setError("Please enter your email.");
@@ -26,7 +28,12 @@ export default function ForgotPassword() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Something went wrong");
       
-      setMessage("A password reset link has been sent to your email. Please check your inbox (and spam folder).");
+      if (data.data?.devResetUrl) {
+        setDevLink(data.data.devResetUrl);
+        setMessage("[Development Mode] SMTP is not configured. You can reset your password using the link below:");
+      } else {
+        setMessage("A password reset link has been sent to your email. Please check your inbox (and spam folder).");
+      }
       setSubmitted(true);
     } catch (err) {
       setError(err.message);
@@ -47,7 +54,7 @@ export default function ForgotPassword() {
           </span>
         </Link>
       </header>
-
+ 
       <main className="flex-grow flex items-center justify-center relative p-4 md:p-8">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
@@ -58,7 +65,7 @@ export default function ForgotPassword() {
           />
           <div className="absolute inset-0 bg-black/40" />
         </div>
-
+ 
         <div className="container mx-auto z-10 flex justify-center">
           <div className="glass-panel w-full max-w-md rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20 backdrop-blur-xl">
             <h3 className="font-headline text-3xl font-bold text-white mb-2 text-center">
@@ -69,10 +76,15 @@ export default function ForgotPassword() {
                 ? "Check your email for the reset instructions." 
                 : "Enter your email to receive a password reset link."}
             </p>
-
+ 
             {message && (
               <div className="mb-8 p-4 rounded-2xl bg-green-500/20 border border-green-500/50 text-green-100 text-sm font-medium">
                 {message}
+                {devLink && (
+                  <div className="mt-4 p-3 bg-white/10 rounded-xl border border-white/20 select-all font-mono break-all text-xs">
+                    <a href={devLink} className="underline text-orange-400 hover:text-orange-300 font-bold block">{devLink}</a>
+                  </div>
+                )}
               </div>
             )}
             {error && (

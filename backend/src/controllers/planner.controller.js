@@ -6,8 +6,9 @@ export const PlannerController = {
   // GET /api/planner?week=2024-01-15   (week = any Monday date)
   async getWeek(req, res, next) {
     try {
-      const { week } = req.query;
-      if (!week) return res.status(400).json({ success: false, message: 'week query param required (YYYY-MM-DD)' });
+      // Accept both ?week= and ?weekStart= for compatibility
+      const week = req.query.week || req.query.weekStart;
+      if (!week) return res.status(400).json({ success: false, message: 'week (or weekStart) query param required (YYYY-MM-DD)' });
 
       const plan = await PlannerModel.getPlanWithEntries(req.user.id, week);
       sendSuccess(res, { plan: plan || null });

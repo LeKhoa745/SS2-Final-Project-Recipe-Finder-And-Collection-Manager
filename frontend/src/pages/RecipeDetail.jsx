@@ -29,7 +29,15 @@ export default function RecipeDetail() {
   const [similarRecipes, setSimilarRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(() => {
+    if (!id) return false;
+    try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      return savedRecipes.some(r => String(r.id) === String(id));
+    } catch {
+      return false;
+    }
+  });
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [expandedIngredientId, setExpandedIngredientId] = useState(null);
@@ -56,7 +64,39 @@ export default function RecipeDetail() {
           // Fetch from Spoonacular
           const recipeRes = await recipeService.getById(id);
           if (recipeRes.data && recipeRes.data.recipe) {
-            setRecipe(recipeRes.data.recipe);
+            const fetchedRecipe = recipeRes.data.recipe;
+            setRecipe(fetchedRecipe);
+
+            // Sync with local storage for immediate state
+            try {
+              const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+              setIsWishlisted(savedRecipes.some(r => String(r.id) === String(id)));
+            } catch {
+              setIsWishlisted(false);
+            }
+
+            // Verify with backend if logged in
+            const token = localStorage.getItem("accessToken");
+            if (token) {
+              try {
+                const wlData = await wishlistService.check(id);
+                setIsWishlisted(wlData.data.saved);
+                
+                // Sync back to local storage
+                const savedRecipesLatest = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+                if (wlData.data.saved) {
+                  if (!savedRecipesLatest.some(r => String(r.id) === String(id))) {
+                    savedRecipesLatest.push({ id, title: fetchedRecipe.title, image: fetchedRecipe.image, timestamp: Date.now() });
+                    localStorage.setItem("saved_recipes", JSON.stringify(savedRecipesLatest));
+                  }
+                } else {
+                  const updated = savedRecipesLatest.filter(r => String(r.id) !== String(id));
+                  localStorage.setItem("saved_recipes", JSON.stringify(updated));
+                }
+              } catch {
+                // ignore check failure
+              }
+            }
           } else {
             setError("Recipe not found.");
           }
@@ -64,14 +104,6 @@ export default function RecipeDetail() {
           const similarRes = await recipeService.getSimilar(id);
           if (similarRes.data && similarRes.data.recipes) {
             setSimilarRecipes(similarRes.data.recipes);
-          }
-
-          // Check if wishlisted
-          try {
-            const wlData = await wishlistService.check(id);
-            setIsWishlisted(wlData.data.saved);
-          } catch {
-            // ignore if user not logged in
           }
         }
       } catch (err) {
@@ -89,12 +121,25 @@ export default function RecipeDetail() {
     if (!recipe || isCommunity) return;
     setWishlistLoading(true);
     try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      const token = localStorage.getItem("accessToken");
+
       if (isWishlisted) {
-        await wishlistService.remove(id);
+        if (token) {
+          await wishlistService.remove(id);
+        }
         setIsWishlisted(false);
+        const updated = savedRecipes.filter(r => String(r.id) !== String(id));
+        localStorage.setItem("saved_recipes", JSON.stringify(updated));
       } else {
-        await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
+        if (token) {
+          await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
+        }
         setIsWishlisted(true);
+        if (!savedRecipes.some(r => String(r.id) === String(id))) {
+          savedRecipes.push({ id, title: recipe.title, image: recipe.image, timestamp: Date.now() });
+          localStorage.setItem("saved_recipes", JSON.stringify(savedRecipes));
+        }
       }
     } catch (err) {
       console.error("Wishlist operation failed:", err);
