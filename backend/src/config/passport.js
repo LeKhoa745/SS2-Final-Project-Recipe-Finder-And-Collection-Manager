@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import pool from './db.js';
+import { UserModel } from '../models/user.model.js';
 
 passport.use(
   new GoogleStrategy(
@@ -15,30 +15,26 @@ passport.use(
         const avatar = profile.photos[0]?.value || null;
 
         // Check if user exists
-        const [rows] = await pool.query(
-          'SELECT * FROM users WHERE google_id = ? OR email = ?',
-          [profile.id, email]
-        );
+        let user = await UserModel.findByGoogleIdOrEmail(profile.id, email);
 
-        if (rows.length > 0) {
+        if (user) {
           // Update google_id if user registered with email before
-          if (!rows[0].google_id) {
-            await pool.query(
-              'UPDATE users SET google_id = ?, avatar = ? WHERE id = ?',
-              [profile.id, avatar, rows[0].id]
-            );
+          if (!user.google_id) {
+            await UserModel.updateGoogleInfo(user.id, profile.id, avatar);
+            user = await UserModel.findById(user.id);
           }
-          return done(null, rows[0]);
+          return done(null, user);
         }
 
         // Create new user
-        const [result] = await pool.query(
-          'INSERT INTO users (name, email, google_id, avatar) VALUES (?, ?, ?, ?)',
-          [profile.displayName, email, profile.id, avatar]
-        );
+        user = await UserModel.create({
+          name: profile.displayName,
+          email,
+          googleId: profile.id,
+          avatar
+        });
 
-        const [newUser] = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-        return done(null, newUser[0]);
+        return done(null, user);
       } catch (err) {
         return done(err, null);
       }

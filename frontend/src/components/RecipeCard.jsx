@@ -2,10 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
+
+export default function RecipeCard({ id, title, image, onWishlist, onUnsave, source, authorName }) {
+
 export default function RecipeCard({ id, title, image, readyInMinutes, onWishlist }) {
+
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const isCommunity = source === 'community';
 
   useEffect(() => {
     if (!id) return;
@@ -22,20 +28,32 @@ export default function RecipeCard({ id, title, image, readyInMinutes, onWishlis
 
   const handleWishlistClick = async (e) => {
     e.stopPropagation();
-    if (!id) {
-      if (onWishlist) onWishlist();
-      return;
-    }
+    if (!id) return;
 
     setLoading(true);
     try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      
       if (isWishlisted) {
         await wishlistService.remove(id);
         setIsWishlisted(false);
+        
+        // Remove from local storage
+        const updatedRecipes = savedRecipes.filter(r => r.id !== id);
+        localStorage.setItem("saved_recipes", JSON.stringify(updatedRecipes));
+        
+        if (onUnsave) onUnsave();
       } else {
-        await wishlistService.add({ recipeId: id, recipeTitle: title, image });
+        await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
         setIsWishlisted(true);
+        
+        // Add to local storage
+        if (!savedRecipes.find(r => r.id === id)) {
+          savedRecipes.push({ id, title, image, timestamp: Date.now() });
+          localStorage.setItem("saved_recipes", JSON.stringify(savedRecipes));
+        }
       }
+      if (onWishlist) onWishlist();
     } catch (err) {
       console.error("Wishlist operation failed:", err);
     } finally {
@@ -43,9 +61,15 @@ export default function RecipeCard({ id, title, image, readyInMinutes, onWishlis
     }
   };
 
+  const handleClick = () => {
+    if (!id) return;
+    // Community recipe IDs already have 'community-' prefix from the backend
+    navigate(`/recipe/${id}`);
+  };
+
   return (
     <div 
-      onClick={() => { if (id) navigate(`/recipe/${id}`) }}
+      onClick={handleClick}
       className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-orange-50 flex flex-col h-full cursor-pointer"
     >
       <div className="relative h-56 overflow-hidden">
@@ -54,6 +78,14 @@ export default function RecipeCard({ id, title, image, readyInMinutes, onWishlis
           alt={title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
+
+        {/* Community badge */}
+        {isCommunity && (
+          <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-purple-600/90 text-white text-xs font-bold shadow-lg backdrop-blur-sm flex items-center gap-1.5">
+            <span>👨‍🍳</span> {authorName || "Community"}
+          </div>
+        )}
+
         <button
           onClick={handleWishlistClick}
           disabled={loading}
@@ -67,8 +99,15 @@ export default function RecipeCard({ id, title, image, readyInMinutes, onWishlis
       <div className="p-5 flex flex-col flex-grow">
         <h3 className="font-bold text-xl line-clamp-2 mb-3 text-[#2d1b11] group-hover:text-orange-600 transition-colors leading-tight">{title}</h3>
         <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 font-medium">
+
+          <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> 25 mins</span>
+          <span className="font-bold text-orange-500 flex items-center gap-0.5">
+            {isCommunity ? "View Recipe" : "Explore"} <span className="translate-y-[0.5px]">→</span>
+          </span>
+
           <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> {readyInMinutes ? `${readyInMinutes} mins` : 'N/A'}</span>
           <span className="font-bold text-orange-500 flex items-center gap-0.5">Explore <span className="translate-y-[0.5px]">→</span></span>
+
         </div>
       </div>
     </div>

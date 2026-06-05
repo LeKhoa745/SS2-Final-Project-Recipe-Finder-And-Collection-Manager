@@ -13,6 +13,7 @@ const REQUIREMENTS = [
 export default function Signup() {
   const nameRef     = useRef();
   const emailRef    = useRef();
+  const phoneRef    = useRef();
   const passwordRef = useRef();
   const confirmRef  = useRef();
 
@@ -22,6 +23,8 @@ export default function Signup() {
   const [allValid,  setAllValid]  = useState(false);
   const [errorMsg,  setErrorMsg]  = useState("");
   const [loading,   setLoading]   = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
 
   const checkPassword = () => {
@@ -52,6 +55,8 @@ export default function Signup() {
 
     const name     = nameRef.current.value.trim();
     const email    = emailRef.current.value.trim();
+    const phoneVal = phoneRef.current.value.trim();
+    const phone    = phoneVal ? `+84${phoneVal.replace(/^(\+84|0)/, "")}` : ""; 
     const password = passwordRef.current.value;
 
     setLoading(true);
@@ -59,7 +64,7 @@ export default function Signup() {
       const res = await fetch("/api/auth/register", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name, email, password }),
+        body:    JSON.stringify({ name, email, password, phone }),
         credentials: "include", // needed for the refreshToken cookie
       });
 
@@ -77,7 +82,7 @@ export default function Signup() {
         user: data.data.user,
       });
 
-      alert(`✅ Account created successfully!\nWelcome, ${data.data.user.name}! You can now log in.`);
+      // Registration successful
       navigate("/login");
     } catch {
       // Network error – backend is probably not running
@@ -157,23 +162,43 @@ export default function Signup() {
                   </div>
                 </div>
 
-                {/* Email */}
-                <div className="space-y-1.5">
-                  <label className="block text-on-surface-variant font-label text-sm font-semibold uppercase tracking-wider px-1">
-                    Email Address
-                  </label>
-                  <div className="relative group">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
-                      alternate_email
-                    </span>
-                    <input
-                      ref={emailRef}
-                      id="signup-email"
-                      type="email"
-                      required
-                      placeholder="customer123@gmail.com"
-                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all duration-300 font-body text-on-surface"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Email */}
+                  <div className="space-y-1.5 flex-1">
+                    <label className="block text-on-surface-variant font-label text-sm font-semibold uppercase tracking-wider px-1">
+                      Email Address
+                    </label>
+                    <div className="relative group">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                        alternate_email
+                      </span>
+                      <input
+                        ref={emailRef}
+                        id="signup-email"
+                        type="email"
+                        required
+                        placeholder="chef@kitchen.com"
+                        className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all duration-300 font-body text-on-surface"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-1.5 flex-1">
+                    <label className="block text-on-surface-variant font-label text-sm font-semibold uppercase tracking-wider px-1">
+                      Phone Number
+                    </label>
+                    <div className="relative group flex items-center bg-surface-container-low rounded-md">
+                      <span className="pl-4 font-bold text-primary">+84</span>
+                      <input
+                        ref={phoneRef}
+                        id="signup-phone"
+                        type="tel"
+                        required
+                        placeholder="912345678"
+                        className="w-full pl-2 pr-4 py-4 bg-transparent border-none focus:ring-0 outline-none transition-all duration-300 font-body text-on-surface"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -189,12 +214,21 @@ export default function Signup() {
                     <input
                       ref={passwordRef}
                       id="signup-password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       required
                       placeholder="••••••••"
                       onChange={checkPassword}
-                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
+                      className="w-full pl-12 pr-12 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {showPassword ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
@@ -210,12 +244,21 @@ export default function Signup() {
                     <input
                       ref={confirmRef}
                       id="signup-confirm"
-                      type="password"
+                      type={showConfirm ? "text" : "password"}
                       required
                       placeholder="••••••••"
                       onChange={checkPassword}
-                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
+                      className="w-full pl-12 pr-12 py-4 bg-surface-container-low border-none rounded-md focus:ring-0 outline-none transition-all font-body text-on-surface"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {showConfirm ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
                   </div>
                 </div>
 

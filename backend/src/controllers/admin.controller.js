@@ -1,5 +1,7 @@
 import { UserModel } from '../models/user.model.js';
-import pool from '../config/db.js';
+import { WishlistModel } from '../models/wishlist.model.js';
+import { PlannerModel } from '../models/planner.model.js';
+import mongoose from 'mongoose';
 import { sendSuccess } from '../utils/response.js';
 import { NotFoundError } from '../utils/errors.js';
 
@@ -23,7 +25,7 @@ export const AdminController = {
       const { id } = req.params;
 
       if (role !== undefined)     await UserModel.updateRole(id, role);
-      if (isActive !== undefined) await UserModel.toggleActive(id, isActive ? 1 : 0);
+      if (isActive !== undefined) await UserModel.toggleActive(id, isActive);
 
       const user = await UserModel.findById(id);
       if (!user) throw new NotFoundError('User');
@@ -34,8 +36,8 @@ export const AdminController = {
   // DELETE /api/admin/users/:id
   async deleteUser(req, res, next) {
     try {
-      const [result] = await pool.query('DELETE FROM users WHERE id = ?', [req.params.id]);
-      if (!result.affectedRows) throw new NotFoundError('User');
+      const success = await UserModel.delete(req.params.id);
+      if (!success) throw new NotFoundError('User');
       sendSuccess(res, {}, 'User deleted');
     } catch (err) { next(err); }
   },
@@ -43,16 +45,25 @@ export const AdminController = {
   // GET /api/admin/stats
   async getStats(req, res, next) {
     try {
-      const [[{ totalUsers }]]    = await pool.query('SELECT COUNT(*) as totalUsers FROM users');
-      const [[{ totalWishlists }]] = await pool.query('SELECT COUNT(*) as totalWishlists FROM wishlist_items');
-      const [[{ totalPlans }]]    = await pool.query('SELECT COUNT(*) as totalPlans FROM meal_plans');
-      const [[{ newToday }]]      = await pool.query("SELECT COUNT(*) as newToday FROM users WHERE DATE(created_at) = CURDATE()");
+      const User = mongoose.model('User');
+      const WishlistItem = mongoose.model('WishlistItem');
+      const MealPlan = mongoose.model('MealPlan');
+
+      const totalUsers = await User.countDocuments();
+      const totalWishlists = await WishlistItem.countDocuments();
+      const totalPlans = await MealPlan.countDocuments();
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const newToday = await User.countDocuments({ created_at: { $gte: today } });
 
       // Top 5 most-wishlisted recipes
-      const [topRecipes] = await pool.query(
-        `SELECT recipe_id, recipe_title, recipe_image, COUNT(*) as save_count
-         FROM wishlist_items GROUP BY recipe_id ORDER BY save_count DESC LIMIT 5`
-      );
+      const topRecipes = await WishlistItem.aggregate([
+        { $group: { _id: '$recipe_id', recipe_title: { $first: '$recipe_title' }, recipe_image: { $first: '$recipe_image' }, save_count: { $sum: 1 } } },
+        { $sort: { save_count: -1 } },
+        { $limit: 5 },
+        { $project: { _id: 0, recipe_id: '$_id', recipe_title: 1, recipe_image: 1, save_count: 1 } }
+      ]);
 
       sendSuccess(res, { totalUsers, totalWishlists, totalPlans, newToday, topRecipes });
     } catch (err) { next(err); }

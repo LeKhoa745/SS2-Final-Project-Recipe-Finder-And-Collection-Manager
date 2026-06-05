@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
@@ -11,12 +12,32 @@ import OAuthCallback from "./pages/OAuthCallback";
 import ProfileSettings from "./pages/ProfileSettings";
 
 import RecipeDetail from "./pages/RecipeDetail";
+import Collection from "./pages/Collection";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Planner from "./pages/Planner";
+import ChatWidget from "./components/ChatWidget";
 
 // Hide the global Navbar on pages that ship with their own dedicated layout.
 function AppLayout() {
   const location = useLocation();
-  const chromeLessPaths = ["/login", "/signup", "/settings"];
+  const [init, setInit] = React.useState(false);
+
+  React.useEffect(() => {
+    // Small delay to ensure localStorage is read and router context is ready
+    setInit(true);
+  }, []);
+
+  const chromeLessPaths = ["/login", "/signup", "/settings", "/forgot-password", "/reset-password"];
   const hideNav = chromeLessPaths.includes(location.pathname);
+
+  if (!init) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fff8f5]">
+        <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-orange-200 border-t-orange-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -25,15 +46,20 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/planner" element={<Planner />} />
 
         <Route path="/settings" element={<ProfileSettings />} />
 
         <Route path="/recipe/:id" element={<RecipeDetail />} />
+        <Route path="/collection" element={<Collection />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
       </Routes>
+      <ChatWidget />
     </>
   );
 }
