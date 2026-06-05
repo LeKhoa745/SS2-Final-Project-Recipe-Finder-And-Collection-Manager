@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import RecipeCard from "../components/RecipeCard";
 import { wishlistService } from "../api/wishlistService";
 import { getAccessToken } from "../utils/session";
@@ -12,6 +13,7 @@ export default function Wishlist() {
     const fetchWishlist = async () => {
       try {
         setLoading(true);
+
         setError(null);
         
         // 1. Load from local storage first for immediate display
@@ -40,6 +42,17 @@ export default function Wishlist() {
           // If not logged in and nothing in local storage
           setWishlistItems([]);
         }
+
+        const data = await wishlistService.getAll();
+        // Backend returns { items: [...], total: N } inside data.data
+        const formattedItems = (data.data?.items || []).map(item => ({
+          id: item.recipe_id,
+          title: item.recipe_title,
+          image: item.recipe_image,
+          readyInMinutes: item.ready_in_min,
+        }));
+        setWishlistItems(formattedItems);
+
       } catch (err) {
         console.error("Failed to fetch wishlist:", err);
         // Fallback to local storage if backend fails but we have local data
@@ -109,7 +122,7 @@ export default function Wishlist() {
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-orange-50">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
-            <a href="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</a>
+            <Link to="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</Link>
           </div>
         ) : error ? (
            <div className="text-center py-20">
@@ -124,8 +137,15 @@ export default function Wishlist() {
                 id={item.id} 
                 title={item.title} 
                 image={item.image}
+<<<<<<< HEAD
                 readyInMinutes={item.readyInMinutes}
+=======
+
+>>>>>>> e8efc609ea4ecb083ff1fb29366816df8e986f91
                 onUnsave={() => handleItemUnsave(item.id)}
+
+                readyInMinutes={item.readyInMinutes}
+
               />
             ))}
           </div>
@@ -134,7 +154,7 @@ export default function Wishlist() {
             <div className="text-8xl mb-8">🥘</div>
             <h2 className="text-3xl font-bold text-[#2d1b11]">You haven't saved any recipes yet.</h2>
             <p className="text-gray-500 mt-4 text-lg">Browse thousands of recipes and save your favorites here!</p>
-            <a href="/search" className="mt-8 inline-block bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">Start Exploring</a>
+            <Link to="/search" className="mt-8 inline-block bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">Start Exploring</Link>
           </div>
         )}
       </div>
