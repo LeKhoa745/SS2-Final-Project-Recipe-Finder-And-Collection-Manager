@@ -5,7 +5,7 @@ import { getAccessToken } from "../utils/session";
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "model", content: "Hi! I'm your AI Kitchen Assistant. How can I help you today? 🍳" }
+    { role: "model", content: "Hi! I'm Chef AI. I can help you with recipes, cooking tips, or navigating the website's features. How can I help you today? 🍳" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,7 +106,7 @@ export default function ChatWidget() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask for a recipe or tip..."
+              placeholder="Ask Chef AI or inquire about website features..."
               className="flex-1 bg-orange-50/50 border border-orange-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-600/20 transition-all"
             />
             <button 
