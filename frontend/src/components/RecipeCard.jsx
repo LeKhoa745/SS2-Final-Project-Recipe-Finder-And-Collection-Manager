@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
-export default function RecipeCard({ id, title, image, onWishlist, onUnsave, source, authorName }) {
+export default function RecipeCard({ id, title, image, readyInMinutes, onWishlist, onUnsave, source, authorName }) {
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(() => {
     if (!id) return false;
@@ -39,7 +39,7 @@ export default function RecipeCard({ id, title, image, onWishlist, onUnsave, sou
           const savedRecipesLatest = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
           if (data.saved) {
             if (!savedRecipesLatest.some(r => String(r.id) === String(id))) {
-              savedRecipesLatest.push({ id, title, image, timestamp: Date.now() });
+              savedRecipesLatest.push({ id, title, image, readyInMinutes, timestamp: Date.now() });
               localStorage.setItem("saved_recipes", JSON.stringify(savedRecipesLatest));
             }
           } else {
@@ -52,7 +52,7 @@ export default function RecipeCard({ id, title, image, onWishlist, onUnsave, sou
       }
     };
     checkWishlist();
-  }, [id, title, image]);
+  }, [id, title, image, readyInMinutes]);
 
   const handleWishlistClick = async (e) => {
     e.stopPropagation();
@@ -76,13 +76,13 @@ export default function RecipeCard({ id, title, image, onWishlist, onUnsave, sou
         if (onUnsave) onUnsave();
       } else {
         if (token) {
-          await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
+          await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image, readyInMinutes });
         }
         setIsWishlisted(true);
         
         // Add to local storage
         if (!savedRecipes.some(r => String(r.id) === String(id))) {
-          savedRecipes.push({ id, title, image, timestamp: Date.now() });
+          savedRecipes.push({ id, title, image, readyInMinutes, timestamp: Date.now() });
           localStorage.setItem("saved_recipes", JSON.stringify(savedRecipes));
         }
         
@@ -133,7 +133,7 @@ export default function RecipeCard({ id, title, image, onWishlist, onUnsave, sou
       <div className="p-5 flex flex-col flex-grow">
         <h3 className="font-bold text-xl line-clamp-2 mb-3 text-[#2d1b11] group-hover:text-orange-600 transition-colors leading-tight">{title}</h3>
         <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 font-medium">
-          <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> 25 mins</span>
+          <span className="flex items-center gap-1.5"><span className="text-sm">⏱️</span> {readyInMinutes ? `${readyInMinutes} mins` : '25 mins'}</span>
           <span className="font-bold text-orange-500 flex items-center gap-0.5">
             {isCommunity ? "View Recipe" : "Explore"} <span className="translate-y-[0.5px]">→</span>
           </span>

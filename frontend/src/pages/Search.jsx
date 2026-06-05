@@ -28,14 +28,6 @@ export default function Search() {
         
         setRecipes(mainRecipes);
         setCommunityRecipes(commRecipes);
-        
-        // Save to session storage for persistence on back/forward or refresh
-        sessionStorage.setItem("last_search_results", JSON.stringify({
-          query,
-          recipes: mainRecipes,
-          communityRecipes: commRecipes,
-          timestamp: Date.now()
-        }));
       } catch (err) {
         console.error("Search failed:", err);
         setError("Failed to fetch recipes. Please try again.");
@@ -51,22 +43,7 @@ export default function Search() {
       return;
     }
 
-    // 2. If no query in URL, check if we have saved results from a previous search
-    const saved = sessionStorage.getItem("last_search_results");
-    if (saved) {
-      try {
-        const { query: savedQuery, recipes: savedRecipes, communityRecipes: savedComm } = JSON.parse(saved);
-        // Only use saved if it was ALSO an empty query search, or if we want to restore last state
-        setRecipes(savedRecipes);
-        setCommunityRecipes(savedComm);
-        // If we want to stay fresh, we could still fetch, but for now we restore
-        return;
-      } catch (e) {
-        console.error("Failed to parse saved search", e);
-      }
-    }
-    
-    // 3. Fallback: fetch default recipes
+    // 2. Otherwise fetch default recipes
     fetchRecipes("");
   }, [currentQuery]);
 
@@ -103,6 +80,7 @@ export default function Search() {
                     title={recipe.title}
                     image={recipe.image}
                     id={recipe.id}
+                    readyInMinutes={recipe.readyInMinutes}
                     source={recipe.source}
                     authorName={recipe.authorName}
                   />
@@ -115,6 +93,7 @@ export default function Search() {
                     title={recipe.title} 
                     image={recipe.image} 
                     id={recipe.id} 
+                    readyInMinutes={recipe.readyInMinutes}
                   />
                 ))}
               </div>

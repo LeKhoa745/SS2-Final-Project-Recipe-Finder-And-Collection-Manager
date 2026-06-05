@@ -507,6 +507,7 @@ export default function RecipeDetail() {
                   id={item.id} 
                   title={item.title} 
                   image={`https://spoonacular.com/recipeImages/${item.id}-556x370.${item.imageType || 'jpg'}`} 
+                  readyInMinutes={item.readyInMinutes}
                 />
               ))}
             </div>

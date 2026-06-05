@@ -49,17 +49,18 @@ export default function Collection() {
     if (isLoggedIn && tab === "my") fetchMyRecipes();
   }, [tab, isLoggedIn]);
 
-  const fetchMyRecipes = async () => {
-    setLoading(true);
+  const fetchMyRecipes = async (silent = false) => {
+    const isSilent = silent || recipes.length > 0;
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
       const res = await collectionService.getMyRecipes();
       setRecipes(res.data?.recipes || []);
     } catch (err) {
-      setError("Failed to load your recipes.");
+      if (!isSilent) setError("Failed to load your recipes.");
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -107,16 +108,22 @@ export default function Collection() {
 
       if (editingId) {
         await collectionService.updateRecipe(editingId, payload);
+        // Instant UI update
+        setRecipes(prev => prev.map(r => r.id === editingId ? { ...r, ...payload, cookTimeMinutes: payload.cookTimeMinutes } : r));
         setSuccessMsg("Recipe updated successfully! 🎉");
       } else {
-        await collectionService.createRecipe(payload);
+        const res = await collectionService.createRecipe(payload);
+        if (res.data && res.data.recipe) {
+          setRecipes(prev => [res.data.recipe, ...prev]);
+        }
         setSuccessMsg("Recipe created and shared! 🎉");
       }
 
       setForm(emptyRecipe());
       setEditingId(null);
       setTab("my");
-      fetchMyRecipes();
+      // Silently fetch to ensure everything is perfectly in sync with DB
+      fetchMyRecipes(true);
     } catch (err) {
       setError(err.message || "Failed to save recipe.");
     } finally {

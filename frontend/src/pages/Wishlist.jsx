@@ -27,7 +27,8 @@ export default function Wishlist() {
           const formattedItems = itemsList.map(item => ({
             id: item.recipe_id,
             title: item.recipe_title,
-            image: item.recipe_image
+            image: item.recipe_image,
+            readyInMinutes: item.ready_in_min
           }));
           
           // Merge local and backend (backend takes priority for canonical state)
@@ -123,6 +124,7 @@ export default function Wishlist() {
                 id={item.id} 
                 title={item.title} 
                 image={item.image}
+                readyInMinutes={item.readyInMinutes}
                 onUnsave={() => handleItemUnsave(item.id)}
               />
             ))}

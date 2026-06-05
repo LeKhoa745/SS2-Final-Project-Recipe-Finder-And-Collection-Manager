@@ -75,8 +75,9 @@ export const RecipeService = {
         source: 'live',
       };
 
-      // 3. Save to DB Cache for future use
-      await RecipeCacheModel.set(cacheKey, result, 'search');
+      // 3. Save to DB Cache for future use (exclude communityResults — they are always fetched fresh)
+      const { communityResults: _cr, ...cachePayload } = result;
+      await RecipeCacheModel.set(cacheKey, cachePayload, 'search');
 
       return result;
     } catch (err) {

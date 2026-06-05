@@ -208,6 +208,7 @@ export default function Home() {
                 id={recipe.id}
                 title={recipe.title}
                 image={recipe.image}
+                readyInMinutes={recipe.readyInMinutes}
                 onWishlist={() => handleWishlist(recipe.title)}
               />
             ))}
