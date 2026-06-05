@@ -85,6 +85,7 @@ export default function Search() {
 
         {error && <p className="text-center text-red-500 text-xl py-20">{error}</p>}
 
+
         {!loading && !error && (communityRecipes.length > 0 || recipes.length > 0) ? (
           <>
             <div className="mb-10">
@@ -122,6 +123,16 @@ export default function Search() {
           </>
         ) : !loading && !error && currentQuery ? (
           <p className="text-center text-gray-500 text-xl py-20">Recipe not found.</p>
+
+        {!loading && !error && recipes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {recipes.map((r) => (
+              <RecipeCard key={r.id} title={r.title} image={r.image} id={r.id} readyInMinutes={r.readyInMinutes} />
+            ))}
+          </div>
+        ) : !loading && !error && searchParams.get("q") ? (
+          <p className="text-center text-gray-500 text-xl py-20">We don't have such dish/ingredient yet.</p>
+
         ) : !loading && !error && (
           <p className="text-center text-gray-500 text-xl py-20">No recipes available right now.</p>
         )}
