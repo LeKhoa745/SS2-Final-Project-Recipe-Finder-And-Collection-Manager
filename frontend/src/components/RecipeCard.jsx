@@ -8,23 +8,55 @@ export default function RecipeCard({ id, title, image, onWishlist, onUnsave, sou
 export default function RecipeCard({ id, title, image, readyInMinutes, onWishlist }) {
 
   const navigate = useNavigate();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(() => {
+    if (!id) return false;
+    try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      return savedRecipes.some(r => String(r.id) === String(id));
+    } catch {
+      return false;
+    }
+  });
   const [loading, setLoading] = useState(false);
 
   const isCommunity = source === 'community';
 
   useEffect(() => {
     if (!id) return;
+    
+    // Sync state with local storage
+    try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      setIsWishlisted(savedRecipes.some(r => String(r.id) === String(id)));
+    } catch {
+      setIsWishlisted(false);
+    }
+
     const checkWishlist = async () => {
       try {
-        const { data } = await wishlistService.check(id);
-        setIsWishlisted(data.saved);
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          const { data } = await wishlistService.check(id);
+          setIsWishlisted(data.saved);
+          
+          // Sync with local storage
+          const savedRecipesLatest = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+          if (data.saved) {
+            if (!savedRecipesLatest.some(r => String(r.id) === String(id))) {
+              savedRecipesLatest.push({ id, title, image, timestamp: Date.now() });
+              localStorage.setItem("saved_recipes", JSON.stringify(savedRecipesLatest));
+            }
+          } else {
+            const updated = savedRecipesLatest.filter(r => String(r.id) !== String(id));
+            localStorage.setItem("saved_recipes", JSON.stringify(updated));
+          }
+        }
       } catch {
         // Silently fail if not logged in or check fails
       }
     };
     checkWishlist();
-  }, [id]);
+  }, [id, title, image]);
 
   const handleWishlistClick = async (e) => {
     e.stopPropagation();
@@ -33,27 +65,33 @@ export default function RecipeCard({ id, title, image, readyInMinutes, onWishlis
     setLoading(true);
     try {
       const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      const token = localStorage.getItem("accessToken");
       
       if (isWishlisted) {
-        await wishlistService.remove(id);
+        if (token) {
+          await wishlistService.remove(id);
+        }
         setIsWishlisted(false);
         
         // Remove from local storage
-        const updatedRecipes = savedRecipes.filter(r => r.id !== id);
+        const updatedRecipes = savedRecipes.filter(r => String(r.id) !== String(id));
         localStorage.setItem("saved_recipes", JSON.stringify(updatedRecipes));
         
         if (onUnsave) onUnsave();
       } else {
-        await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
+        if (token) {
+          await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
+        }
         setIsWishlisted(true);
         
         // Add to local storage
-        if (!savedRecipes.find(r => r.id === id)) {
+        if (!savedRecipes.some(r => String(r.id) === String(id))) {
           savedRecipes.push({ id, title, image, timestamp: Date.now() });
           localStorage.setItem("saved_recipes", JSON.stringify(savedRecipes));
         }
+        
+        if (onWishlist) onWishlist();
       }
-      if (onWishlist) onWishlist();
     } catch (err) {
       console.error("Wishlist operation failed:", err);
     } finally {

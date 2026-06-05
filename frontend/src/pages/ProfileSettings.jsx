@@ -7,6 +7,7 @@ const topLinks = [
   { label: "Recipes", href: "/search" },
   { label: "Collection", href: "/collection" },
   { label: "Saved Recipes", href: "/wishlist" },
+  { label: "Planner", href: "/planner" },
   { label: "Settings", href: "/settings", active: true },
 ];
 
@@ -14,6 +15,7 @@ const sideLinks = [
   { icon: "search", label: "Search Recipes", href: "/search" },
   { icon: "menu_book", label: "Collection", href: "/collection" },
   { icon: "bookmark", label: "Saved Recipes", href: "/wishlist" },
+  { icon: "calendar_month", label: "Planner", href: "/planner" },
   { icon: "settings", label: "Profile Settings", href: "/settings", active: true },
 ];
 
