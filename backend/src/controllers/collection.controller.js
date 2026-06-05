@@ -55,7 +55,7 @@ export const CollectionController = {
       if (!recipe.isPublic && (!req.user || req.user.id !== recipe.userId)) {
         throw new ForbiddenError('This recipe is private');
       }
-
+      console.log('here')
       sendSuccess(res, { recipe });
     } catch (err) { next(err); }
   },
@@ -95,6 +95,18 @@ export const CollectionController = {
     try {
       await UserRecipeModel.deleteAll(req.user.id);
       sendSuccess(res, null, 'All recipes deleted');
+    } catch (err) { next(err); }
+  },
+
+  /**
+   * POST /api/collection/upload
+   * Upload a recipe image and return the path.
+   */
+  async uploadImage(req, res, next) {
+    try {
+      if (!req.file) throw new Error('No file uploaded');
+      const relativePath = `/uploads/recipes/${req.file.filename}`;
+      sendSuccess(res, { imageUrl: relativePath }, 'Image uploaded successfully');
     } catch (err) { next(err); }
   },
 };

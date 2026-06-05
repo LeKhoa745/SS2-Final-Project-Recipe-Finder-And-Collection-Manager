@@ -91,6 +91,19 @@ Auth: `Authorization: Bearer <accessToken>` header for protected routes
 
 ## 2. RECIPES
 
+### GET /recipes/status
+```json
+// Response 200
+{
+  "success": true,
+  "data": {
+    "mode": "mock",
+    "usingFallback": true,
+    "provider": "bundled-sample-data"
+  }
+}
+```
+
 ### GET /recipes/search
 Query params: `q`, `ingredients`, `cuisine`, `diet`, `type`, `page`, `limit`
 
@@ -117,7 +130,8 @@ GET /recipes/search?q=pasta&cuisine=italian&diet=vegetarian&page=1&limit=12
     "totalResults": 82,
     "page": 1,
     "limit": 12,
-    "totalPages": 7
+    "totalPages": 7,
+    "source": "live"
   }
 }
 ```

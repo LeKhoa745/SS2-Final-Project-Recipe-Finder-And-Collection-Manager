@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wishlistService } from "../api/wishlistService";
 
-export default function RecipeCard({ id, title, image, onWishlist, source, authorName }) {
+export default function RecipeCard({ id, title, image, onWishlist, onUnsave, source, authorName }) {
   const navigate = useNavigate();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -10,7 +10,7 @@ export default function RecipeCard({ id, title, image, onWishlist, source, autho
   const isCommunity = source === 'community';
 
   useEffect(() => {
-    if (!id || isCommunity) return;
+    if (!id) return;
     const checkWishlist = async () => {
       try {
         const { data } = await wishlistService.check(id);
@@ -24,20 +24,32 @@ export default function RecipeCard({ id, title, image, onWishlist, source, autho
 
   const handleWishlistClick = async (e) => {
     e.stopPropagation();
-    if (!id || isCommunity) {
-      if (onWishlist) onWishlist();
-      return;
-    }
+    if (!id) return;
 
     setLoading(true);
     try {
+      const savedRecipes = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+      
       if (isWishlisted) {
         await wishlistService.remove(id);
         setIsWishlisted(false);
+        
+        // Remove from local storage
+        const updatedRecipes = savedRecipes.filter(r => r.id !== id);
+        localStorage.setItem("saved_recipes", JSON.stringify(updatedRecipes));
+        
+        if (onUnsave) onUnsave();
       } else {
         await wishlistService.add({ recipeId: id, recipeTitle: title, recipeImage: image });
         setIsWishlisted(true);
+        
+        // Add to local storage
+        if (!savedRecipes.find(r => r.id === id)) {
+          savedRecipes.push({ id, title, image, timestamp: Date.now() });
+          localStorage.setItem("saved_recipes", JSON.stringify(savedRecipes));
+        }
       }
+      if (onWishlist) onWishlist();
     } catch (err) {
       console.error("Wishlist operation failed:", err);
     } finally {
@@ -70,17 +82,15 @@ export default function RecipeCard({ id, title, image, onWishlist, source, autho
           </div>
         )}
 
-        {!isCommunity && (
-          <button
-            onClick={handleWishlistClick}
-            disabled={loading}
-            className={`absolute top-4 right-4 p-3 rounded-2xl shadow-lg transition-all duration-300 transform hover:scale-110 ${
-              isWishlisted ? "bg-orange-600 text-white" : "bg-white/90 hover:bg-white text-orange-600"
-            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isWishlisted ? '🧡' : '🤍'}
-          </button>
-        )}
+        <button
+          onClick={handleWishlistClick}
+          disabled={loading}
+          className={`absolute top-4 right-4 p-3 rounded-2xl shadow-lg transition-all duration-300 transform hover:scale-110 ${
+            isWishlisted ? "bg-orange-600 text-white" : "bg-white/90 hover:bg-white text-orange-600"
+          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isWishlisted ? '🧡' : '🤍'}
+        </button>
       </div>
       <div className="p-5 flex flex-col flex-grow">
         <h3 className="font-bold text-xl line-clamp-2 mb-3 text-[#2d1b11] group-hover:text-orange-600 transition-colors leading-tight">{title}</h3>

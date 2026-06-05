@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import RecipeCard from "../components/RecipeCard";
 import { wishlistService } from "../api/wishlistService";
+import { getAccessToken } from "../utils/session";
 
 export default function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -11,33 +12,71 @@ export default function Wishlist() {
     const fetchWishlist = async () => {
       try {
         setLoading(true);
-        const data = await wishlistService.getAll();
-        const itemsList = data.data?.items || [];
-        const formattedItems = itemsList.map(item => ({
-          id: item.recipe_id,
-          title: item.recipe_title,
-          image: item.recipe_image
-        }));
-        setWishlistItems(formattedItems);
+        setError(null);
+        
+        // 1. Load from local storage first for immediate display
+        const localSaved = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+        if (localSaved.length > 0) {
+          setWishlistItems(localSaved);
+        }
+
+        // 2. Fetch from backend if logged in
+        if (getAccessToken()) {
+          const data = await wishlistService.getAll();
+          const itemsList = data.data?.items || [];
+          const formattedItems = itemsList.map(item => ({
+            id: item.recipe_id,
+            title: item.recipe_title,
+            image: item.recipe_image
+          }));
+          
+          // Merge local and backend (backend takes priority for canonical state)
+          setWishlistItems(formattedItems);
+          
+          // Update local storage to stay in sync with backend
+          localStorage.setItem("saved_recipes", JSON.stringify(formattedItems));
+        } else if (localSaved.length === 0) {
+          // If not logged in and nothing in local storage
+          setWishlistItems([]);
+        }
       } catch (err) {
         console.error("Failed to fetch wishlist:", err);
-        setError("Please login to view your saved recipes.");
+        // Fallback to local storage if backend fails but we have local data
+        const localSaved = JSON.parse(localStorage.getItem("saved_recipes") || "[]");
+        if (localSaved.length > 0) {
+          setWishlistItems(localSaved);
+          setError("Showing offline saved recipes. Please login for full sync.");
+        } else {
+          setError("Please login to view your saved recipes.");
+        }
       } finally {
         setLoading(false);
       }
     };
+
     fetchWishlist();
   }, []);
 
   const handleUnsaveAll = async () => {
     if (!window.confirm("Are you sure you want to remove ALL your saved recipes? This cannot be undone.")) return;
     try {
-      await wishlistService.removeAll();
+      if (getAccessToken()) {
+        await wishlistService.removeAll();
+      }
+      localStorage.removeItem("saved_recipes");
       setWishlistItems([]);
     } catch (err) {
       console.error("Failed to remove all items:", err);
       alert("Something went wrong while removing all recipes.");
     }
+  };
+
+  const handleItemUnsave = (recipeId) => {
+    setWishlistItems(prev => {
+      const updated = prev.filter(item => item.id !== recipeId);
+      localStorage.setItem("saved_recipes", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
@@ -65,12 +104,17 @@ export default function Wishlist() {
           <div className="text-center py-20">
             <p className="text-orange-600 text-xl font-medium animate-pulse">Loading your saved recipes... 🍳</p>
           </div>
-        ) : error ? (
+        ) : error && !getAccessToken() ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-orange-50">
             <div className="text-6xl mb-6">🔒</div>
             <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
             <a href="/login" className="mt-4 inline-block bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all">Go to Login</a>
           </div>
+        ) : error ? (
+           <div className="text-center py-20">
+             <h2 className="text-xl font-bold text-red-500 mb-4">{error}</h2>
+             <button onClick={() => window.location.reload()} className="bg-orange-600 text-white px-6 py-2 rounded-xl font-bold">Try Again</button>
+           </div>
         ) : wishlistItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {wishlistItems.map((item) => (
@@ -78,7 +122,8 @@ export default function Wishlist() {
                 key={item.id} 
                 id={item.id} 
                 title={item.title} 
-                image={item.image} 
+                image={item.image}
+                onUnsave={() => handleItemUnsave(item.id)}
               />
             ))}
           </div>

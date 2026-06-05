@@ -10,9 +10,11 @@ import authRoutes    from './routes/auth.routes.js';
 import recipeRoutes  from './routes/recipe.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
+import aiRoutes      from './routes/ai.routes.js';
 import { plannerRouter, shoppingRouter, newsRouter, adminRouter } from './routes/index.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
+import path from 'path';
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(passport.initialize());
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ── Logging ───────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
@@ -49,6 +53,7 @@ app.use('/api/planner',  plannerRouter);
 app.use('/api/shopping', shoppingRouter);
 app.use('/api/news',     newsRouter);
 app.use('/api/admin',    adminRouter);
+app.use('/api/ai',       aiRoutes);
 
 // ── Error Handling ────────────────────────────────────────────
 app.use(notFound);

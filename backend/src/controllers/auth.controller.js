@@ -1,6 +1,7 @@
 import { AuthService } from '../services/auth.service.js';
 import { sendSuccess } from '../utils/response.js';
 import { AppError } from '../utils/errors.js';
+import bcrypt from 'bcryptjs';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -13,8 +14,8 @@ export const AuthController = {
   // POST /api/auth/register
   async register(req, res, next) {
     try {
-      const { name, email, password } = req.body;
-      const { user, accessToken, refreshToken } = await AuthService.register({ name, email, password });
+      const { name, email, password, phone } = req.body;
+      const { user, accessToken, refreshToken } = await AuthService.register({ name, email, password, phone });
 
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       sendSuccess(res, { user, accessToken }, 'Account created successfully', 201);
@@ -78,20 +79,68 @@ export const AuthController = {
       const nextEmail = req.body.email ?? currentUser.email;
       const nextAvatar = req.body.avatar ?? currentUser.avatar;
       const nextPhone = req.body.phone ?? currentUser.phone;
-
-      const existing = await UserModel.findByEmail(nextEmail);
-      if (existing && existing.id !== req.user.id) {
+      const existingEmail = await UserModel.findByEmail(nextEmail);
+      if (existingEmail && existingEmail.id !== req.user.id) {
         throw new AppError('Email already registered', 409);
       }
 
-      const user = await UserModel.updateProfile(req.user.id, {
+      if (nextPhone) {
+        const existingPhone = await UserModel.findByPhone(nextPhone);
+        if (existingPhone && existingPhone.id !== req.user.id) {
+          throw new AppError('Phone number already registered', 409);
+        }
+      }
+
+      await UserModel.updateProfile(req.user.id, {
         name: nextName,
         email: nextEmail,
         avatar: nextAvatar,
         phone: nextPhone,
       });
 
+      // Handle password update if provided
+      const { oldPassword, newPassword } = req.body;
+      if (newPassword) {
+        await AuthService.updatePassword({ userId: req.user.id, oldPassword, newPassword });
+      }
+
+      // Fetch the most up-to-date user data (including updated hasPassword state)
+      const user = await UserModel.findById(req.user.id);
+
       sendSuccess(res, { user }, 'Profile updated successfully');
+    } catch (err) { next(err); }
+  },
+
+  async updatePassword(req, res, next) {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      await AuthService.updatePassword({ userId: req.user.id, oldPassword, newPassword });
+      
+      const { UserModel } = await import('../models/user.model.js');
+      const user = await UserModel.findById(req.user.id);
+      sendSuccess(res, { user }, 'Password updated successfully');
+    } catch (err) { next(err); }
+  },
+
+  async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        throw new AppError('No image file provided', 400);
+      }
+      
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      const { UserModel } = await import('../models/user.model.js');
+      const currentUser = await UserModel.findById(req.user.id);
+      
+      await UserModel.updateProfile(req.user.id, {
+        name: currentUser.name,
+        email: currentUser.email,
+        phone: currentUser.phone,
+        avatar: avatarUrl
+      });
+      
+      const user = await UserModel.findById(req.user.id);
+      sendSuccess(res, { user, avatarUrl }, 'Avatar uploaded successfully');
     } catch (err) { next(err); }
   },
 
@@ -103,6 +152,37 @@ export const AuthController = {
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       // Redirect to frontend with access token in query (frontend stores in memory)
       res.redirect(`${process.env.CLIENT_URL}/oauth/callback?token=${accessToken}`);
+    } catch (err) { next(err); }
+  },
+
+  async forgotPassword(req, res, next) {
+    try {
+      const result = await AuthService.forgotPassword(req.body.email);
+      sendSuccess(res, result, 'Reset link sent to your email. Please check your inbox.');
+    } catch (err) { next(err); }
+  },
+
+  async verifyResetPhone(req, res, next) {
+    try {
+      const { token, phone } = req.body;
+      await AuthService.verifyResetPhone(token, phone);
+      sendSuccess(res, null, 'Phone number confirmed.');
+    } catch (err) { next(err); }
+  },
+
+  async verifyResetIdentity(req, res, next) {
+    try {
+      const { identity } = req.body;
+      const { token } = await AuthService.verifyResetIdentity(identity);
+      sendSuccess(res, { token }, 'Identity verified. You can now reset your password.');
+    } catch (err) { next(err); }
+  },
+
+  async resetPassword(req, res, next) {
+    try {
+      const { token, password } = req.body;
+      await AuthService.resetPassword(token, password);
+      sendSuccess(res, null, 'Password has been reset successfully. You can now log in.');
     } catch (err) { next(err); }
   },
 };
