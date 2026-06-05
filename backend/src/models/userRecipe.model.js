@@ -197,7 +197,7 @@ export const UserRecipeModel = {
   _format(doc) {
     return {
       id: doc._id.toString(),
-      userId: doc.user_id._id || doc.user_id,
+      userId: doc.user_id ? (doc.user_id._id || doc.user_id).toString() : null,
       title: doc.title,
       description: doc.description,
       imageUrl: doc.image_url,

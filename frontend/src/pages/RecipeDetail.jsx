@@ -107,6 +107,7 @@ export default function RecipeDetail() {
           }
 
 
+
           // Check if wishlisted
           try {
             const wlData = await wishlistService.check(id);
@@ -149,6 +150,9 @@ export default function RecipeDetail() {
         const updated = savedRecipes.filter(r => String(r.id) !== String(id));
         localStorage.setItem("saved_recipes", JSON.stringify(updated));
       } else {
+        if (token) {
+          await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
+        }
 
         if (token) {
           await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });

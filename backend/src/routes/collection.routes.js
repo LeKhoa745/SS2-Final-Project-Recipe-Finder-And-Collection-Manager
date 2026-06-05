@@ -42,7 +42,7 @@ router.post('/',
 
 router.put('/:id',
   protect,
-  [param('id').isInt(), ...recipeRules],
+  [param('id').isMongoId(), ...recipeRules],
   handleValidationErrors,
   CollectionController.update
 );
@@ -60,7 +60,7 @@ router.post('/upload',
 
 router.delete('/:id',
   protect,
-  param('id').isInt(),
+  param('id').isMongoId(),
   handleValidationErrors,
   CollectionController.delete
 );
@@ -68,7 +68,7 @@ router.delete('/:id',
 // ── Public detail route (must be last to not shadow /mine, /public) ──
 router.get('/:id',
   optionalAuth,
-  param('id').isInt(),
+  param('id').isMongoId(),
   handleValidationErrors,
   CollectionController.getById
 );
