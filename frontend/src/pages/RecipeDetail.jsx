@@ -105,6 +105,23 @@ export default function RecipeDetail() {
           if (similarRes.data && similarRes.data.recipes) {
             setSimilarRecipes(similarRes.data.recipes);
           }
+
+
+          // Check if wishlisted
+          try {
+            const wlData = await wishlistService.check(id);
+            setIsWishlisted(wlData.data.saved);
+          } catch {
+            // ignore if user not logged in
+          }
+
+        // Check if wishlisted
+        try {
+          const wlData = await wishlistService.check(id);
+          setIsWishlisted(wlData.data.saved);
+        } catch {
+          // ignore if user not logged in
+
         }
       } catch (err) {
         console.error("Failed to fetch recipe details:", err);
@@ -132,9 +149,22 @@ export default function RecipeDetail() {
         const updated = savedRecipes.filter(r => String(r.id) !== String(id));
         localStorage.setItem("saved_recipes", JSON.stringify(updated));
       } else {
+
         if (token) {
           await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
         }
+
+        await wishlistService.add({ recipeId: id, recipeTitle: recipe.title, recipeImage: recipe.image });
+
+        await wishlistService.add({
+          recipeId: id,
+          recipeTitle: recipe.title,
+          recipeImage: recipe.image,
+          readyInMinutes: recipe.readyInMinutes,
+          servings: recipe.servings,
+          sourceUrl: recipe.sourceUrl,
+        });
+
         setIsWishlisted(true);
         if (!savedRecipes.some(r => String(r.id) === String(id))) {
           savedRecipes.push({ id, title: recipe.title, image: recipe.image, timestamp: Date.now() });
@@ -506,7 +536,8 @@ export default function RecipeDetail() {
                   key={item.id} 
                   id={item.id} 
                   title={item.title} 
-                  image={`https://spoonacular.com/recipeImages/${item.id}-556x370.${item.imageType || 'jpg'}`} 
+                  image={`https://spoonacular.com/recipeImages/${item.id}-556x370.${item.imageType || 'jpg'}`}
+                  readyInMinutes={item.readyInMinutes}
                 />
               ))}
             </div>
