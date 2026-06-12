@@ -43,16 +43,6 @@ export default function Wishlist() {
           setWishlistItems([]);
         }
 
-        const data = await wishlistService.getAll();
-        // Backend returns { items: [...], total: N } inside data.data
-        const formattedItems = (data.data?.items || []).map(item => ({
-          id: item.recipe_id,
-          title: item.recipe_title,
-          image: item.recipe_image,
-          readyInMinutes: item.ready_in_min,
-        }));
-        setWishlistItems(formattedItems);
-
       } catch (err) {
         console.error("Failed to fetch wishlist:", err);
         // Fallback to local storage if backend fails but we have local data
@@ -137,14 +127,8 @@ export default function Wishlist() {
                 id={item.id} 
                 title={item.title} 
                 image={item.image}
-<<<<<<< HEAD
                 readyInMinutes={item.readyInMinutes}
-=======
-
->>>>>>> e8efc609ea4ecb083ff1fb29366816df8e986f91
                 onUnsave={() => handleItemUnsave(item.id)}
-
-                readyInMinutes={item.readyInMinutes}
 
               />
             ))}

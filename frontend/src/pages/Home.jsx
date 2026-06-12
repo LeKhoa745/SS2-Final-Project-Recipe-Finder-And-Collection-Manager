@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import RecipeCard from "../components/RecipeCard";
-import { newsService } from "../api/newsService";
 import { recipeService } from "../api/recipeService";
 import { getStoredUser } from "../utils/session";
+
 
 function getAvatarFallback(name = "User") {
   const initial = (name || "User").trim().charAt(0).toUpperCase() || "U";
@@ -20,27 +20,10 @@ function getAvatarFallback(name = "User") {
 export default function Home() {
   const navigate = useNavigate();
   const profileMenuRef = useRef(null);
-  const [news, setNews] = useState([]);
-  const [loadingNews, setLoadingNews] = useState(true);
   const [user, setUser] = useState(getStoredUser());
   const [recipes, setRecipes] = useState([]);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const data = await newsService.getHeadlines();
-        setNews(data.data?.articles || []);
-      } catch (err) {
-        console.error("Failed to fetch news:", err);
-      } finally {
-        setLoadingNews(false);
-      }
-    };
-
-    fetchNews();
-  }, []);
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -152,49 +135,6 @@ export default function Home() {
       <SearchBar onSearch={handleSearch} />
 
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="mb-20">
-          <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-3xl font-bold text-[#2d1b11]">
-            Culinary News & Trends
-          </h2>
-          {loadingNews ? (
-            <p className="italic text-gray-500">Fetching latest food trends...</p>
-          ) : news.length > 0 ? (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {news.slice(0, 3).map((article, idx) => (
-                <a
-                  key={idx}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:shadow-xl"
-                >
-                  <div className="h-48 overflow-hidden">
-                    <img
-                      src={article.urlToImage || "https://via.placeholder.com/600x400?text=Food+News"}
-                      alt={article.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-orange-600">
-                      {article.source?.name}
-                    </span>
-                    <h3 className="mb-3 line-clamp-2 text-lg font-bold transition-colors group-hover:text-orange-600">
-                      {article.title}
-                    </h3>
-                    <div className="mt-auto flex items-center justify-between border-t border-gray-50 pt-4 text-xs text-gray-400">
-                      <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
-                      <span className="font-bold text-orange-400">Read More</span>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400">No news articles found at the moment.</p>
-          )}
-        </div>
-
         <h2 className="mb-8 border-l-4 border-orange-600 pl-4 text-3xl font-bold text-[#2d1b11]">
           Browse Recipes
         </h2>
